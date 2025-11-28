@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ASCIIMMO - Client</title>
+  <style>
+    body { font-family: monospace; padding: 1rem; background: #111; color: #ddd; }
+    input, button { font-family: sans-serif; }
+    pre { background: #000; color: #9f9; padding: 1rem; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>ASCIIMMO - Client</h1>
+  <div>
+    <label>Seed: <input id="seed" type="number" value="12345"/></label>
+    <label>Width: <input id="width" type="number" value="80"/></label>
+    <label>Height: <input id="height" type="number" value="24"/></label>
+    <button id="gen">Generate (fetch /world)</button>
+    <button id="loadfile">Load client/world.txt</button>
+  </div>
+  <pre id="map">(map will appear here)</pre>
+  <script src="app.js"></script>
+</body>
+</html>

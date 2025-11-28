@@ -1,0 +1,12 @@
+# Build
+/build/
+
+# Editor
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Generated client world (for quick testing)
+client/world.txt
