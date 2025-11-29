@@ -1,5 +1,4 @@
 #include "worldgen.hpp"
-#include <iostream>
 #include <random>
 #include <sstream>
 #include <vector>
@@ -13,10 +12,9 @@ static inline int idx(int x, int y, int w) { return y * w + x; }
 
 std::string WorldGen::generate() {
     std::mt19937_64 rng(seed_);
-    std::uniform_real_distribution<double> d(0.0, 1.0);
+    std::uniform_real_distribution<double> d(-0.5, 1.5);
 
     std::vector<double> map(width_ * height_);
-    std::cout << map.size() << std::endl;
 
     // Layer 1: base noise
     double dWidth = double(width_);
@@ -29,15 +27,25 @@ std::string WorldGen::generate() {
     }
 
     // Smooth the map a few times to create blobs
-    for (int iter = 0; iter < 1; ++iter) {
+    for (int iter = 0; iter < 2; ++iter) {
         std::vector<double> tmp = map;
         for (int y = 1; y < height_ - 1; ++y) {
             for (int x = 1; x < width_ - 1; ++x) {
                 double sum = 0.0;
-                for (int yy = -1; yy <= 1; ++yy)
-                    for (int xx = -1; xx <= 1; ++xx)
+                double count = 0;
+                for (int yy = -1; yy <= 1; ++yy){
+                    for (int xx = -1; xx <= 1; ++xx) {
+                        if (xx + x < 0 || 
+                            xx + x >= width_ ||
+                            yy + y < 0 ||
+                            yy + y >= height_) {
+                            continue;  // skip out-of-bounds
+                        }
                         sum += map[idx(x + xx, y + yy, width_)];
-                tmp[idx(x, y, width_)] = sum / 9.0;
+                        ++count;
+                    }
+                }
+                tmp[idx(x, y, width_)] = sum / count;
             }
         }
         map.swap(tmp);

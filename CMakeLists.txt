@@ -1,17 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
-project(asciimmo-server VERSION 0.1 LANGUAGES CXX)
+project(asciimmo VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(asciimmo-server
-  src/main.cpp
-  src/worldgen.cpp
-  src/server_http.cpp
-)
-
-target_include_directories(asciimmo-server PRIVATE include)
-
-# Fetch cpp-httplib (single-header) for a simple HTTP endpoint
+# Fetch cpp-httplib (single-header) for HTTP endpoints
 include(FetchContent)
 FetchContent_Declare(
   cpp-httplib
@@ -20,11 +12,31 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(cpp-httplib)
 
-# Ensure include path to fetched cpp-httplib root (contains httplib.h)
-FetchContent_GetProperties(cpp-httplib)
-if (cpp-httplib_SOURCE_DIR)
-  target_include_directories(asciimmo-server PRIVATE ${cpp-httplib_SOURCE_DIR})
-endif()
+# Shared worldgen library
+add_library(worldgen STATIC src/worldgen.cpp)
+target_include_directories(worldgen PUBLIC include)
 
-# Install rule (optional)
-install(TARGETS asciimmo-server RUNTIME DESTINATION bin)
+# Microservice binaries
+add_executable(world-service src/world_service.cpp)
+target_include_directories(world-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
+target_link_libraries(world-service PRIVATE worldgen)
+
+add_executable(auth-service src/auth_service.cpp)
+target_include_directories(auth-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
+
+add_executable(session-service src/session_service.cpp)
+target_include_directories(session-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
+
+add_executable(social-service src/social_service.cpp)
+target_include_directories(social-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
+
+# Legacy monolithic binary (optional; can be removed later)
+add_executable(asciimmo-server
+  src/main.cpp
+  src/worldgen.cpp
+  src/server_http.cpp
+)
+target_include_directories(asciimmo-server PRIVATE include ${cpp-httplib_SOURCE_DIR})
+
+# Install rules
+install(TARGETS world-service auth-service session-service social-service asciimmo-server RUNTIME DESTINATION bin)
