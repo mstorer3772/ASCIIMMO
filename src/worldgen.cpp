@@ -1,7 +1,8 @@
 #include "worldgen.hpp"
+#include <iostream>
 #include <random>
-#include <vector>
 #include <sstream>
+#include <vector>
 
 namespace asciimmo {
 
@@ -14,33 +15,29 @@ std::string WorldGen::generate() {
     std::mt19937_64 rng(seed_);
     std::uniform_real_distribution<double> d(0.0, 1.0);
 
-    int w = width_;
-    int h = height_;
-    std::vector<double> map(w * h);
+    std::vector<double> map(width_ * height_);
+    std::cout << map.size() << std::endl;
 
     // Layer 1: base noise
-    for (int y = 0; y < h; ++y) {
-        for (int x = 0; x < w; ++x) {
-            double nx = double(x) / double(w) - 0.5;
-            double ny = double(y) / double(h) - 0.5;
-            // bias toward center for land
-            double dist = std::sqrt(nx * nx + ny * ny);
+    double dWidth = double(width_);
+    double dHeight = double(height_);
+    for (int y = 0; y < height_; ++y) {
+        for (int x = 0; x < width_; ++x) {
             double val = d(rng);
-            val = val * (1.0 - dist * 0.8);
-            map[idx(x, y, w)] = val;
+            map[idx(x, y, width_)] = val;
         }
     }
 
     // Smooth the map a few times to create blobs
-    for (int iter = 0; iter < 3; ++iter) {
+    for (int iter = 0; iter < 1; ++iter) {
         std::vector<double> tmp = map;
-        for (int y = 1; y < h - 1; ++y) {
-            for (int x = 1; x < w - 1; ++x) {
+        for (int y = 1; y < height_ - 1; ++y) {
+            for (int x = 1; x < width_ - 1; ++x) {
                 double sum = 0.0;
                 for (int yy = -1; yy <= 1; ++yy)
                     for (int xx = -1; xx <= 1; ++xx)
-                        sum += map[idx(x + xx, y + yy, w)];
-                tmp[idx(x, y, w)] = sum / 9.0;
+                        sum += map[idx(x + xx, y + yy, width_)];
+                tmp[idx(x, y, width_)] = sum / 9.0;
             }
         }
         map.swap(tmp);
@@ -48,9 +45,9 @@ std::string WorldGen::generate() {
 
     // Convert to ASCII using thresholds
     std::ostringstream out;
-    for (int y = 0; y < h; ++y) {
-        for (int x = 0; x < w; ++x) {
-            double v = map[idx(x, y, w)];
+    for (int y = 0; y < height_; ++y) {
+        for (int x = 0; x < width_; ++x) {
+            double v = map[idx(x, y, width_)];
             char ch = '.'; // plains
             if (v < 0.18) ch = '~';            // water
             else if (v < 0.30) ch = ',';       // marsh/shore
@@ -59,7 +56,7 @@ std::string WorldGen::generate() {
             else ch = '^';                     // mountain
             out << ch;
         }
-        if (y < h - 1) out << '\n';
+        if (y < height_ - 1) out << '\n';
     }
 
     return out.str();
