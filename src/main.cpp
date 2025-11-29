@@ -1,4 +1,5 @@
 #include "worldgen.hpp"
+#include "server_http.hpp"
 #include <iostream>
 #include <string>
 
@@ -31,17 +32,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    asciimmo::WorldGen gen(seed, width, height);
-    std::string map = gen.generate();
-
     if (http_port != 0) {
-        std::cout << "HTTP server is not implemented in this scaffold yet.\n";
-        std::cout << "Requested port: " << http_port << "\n";
-        std::cout << "TODO: integrate an HTTP library (cpp-httplib / Boost.Beast) to serve /world?seed=<seed>" << std::endl;
-        // TODO: start an HTTP server and serve `map` at /world?seed=<seed>
+        // Start HTTP server that serves /world?seed=&width=&height=
+        asciimmo::run_http_server(http_port, seed, width, height);
         return 0;
     }
 
+    asciimmo::WorldGen gen(seed, width, height);
+    std::string map = gen.generate();
     std::cout << map << std::endl;
     return 0;
 }
