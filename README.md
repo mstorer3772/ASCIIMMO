@@ -32,9 +32,18 @@ Development notes:
 - The generator is deterministic using `std::mt19937_64` seeded with the provided seed.
 - The browser client will attempt to fetch `/world?seed=`; when the server HTTP endpoint is implemented it can be used directly.
 
+# Implementation plans
+
+Initially only implement the top layer of any category.  So initial stats are Physical, Mental, Magic.  And so on.
+
+## Map
+Initially just the one chunk, no scaling, 1km per grid square.  
+
+Grid scale -> metric.  1km^2 per grid -> 1 hectare (100mx100m) per grid -> 1m^2 per grid.
+
 # RPG Design
 
-Everything with a value is a floating point number.  
+Everything with a value is a floating point number.  Health, skills, mana levels, all of it.  Many things are broken up into categories and subcategories and sub-subcategories... and so on.  In general, the value of a leaf is the sum of all the values in its parents and itself.  Growth is even at some ratio of parent to child (x2? experiment with it), and gets bonuses below that, and penalties above it.
 
 ## Stats 
 Several stat categories (physical, mental, magical).  Within each category, there will be a power, endurance, speed, and control attribute.  Debating having "social" and "spiritual" categories.
@@ -215,12 +224,6 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
 
 - Physical Power
   - growth (how good you are at unguided training)
-  - strike
-    - armed
-      - weapon category
-        - specific weapon type
-          - named weapon
-    - unarmed
   - lift
   - leap (w/agility)
 - Pysical Speed
@@ -239,18 +242,23 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
     - by stat
   (treat long term exhastion as a debuf?)
 - Physical Control
+  - growth
   - manual dexterity
   - balance
   - footwork
   - acrobatics
   - stealth
+  - teamwork
 - Determined Passive defense:
   - Resist Physical damage
     - by damage type (cut, pierce, crush, burn, acid)
-- Dermined physical active defense:
+- Determined physical active defense:
   - Dodge (+ phys speed)
   - Parry (+ phys control)
   - Block (+ phys power)
+- Determined physical offense base:
+  - Melee
+  - Ranged
 - Mental
   - Mental Power: Intelligence
     - Growth
@@ -268,8 +276,6 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
     - Meditation
       - Mana affinity improvement
       - Mana gathering
-    - Resist Mental Debufs (pain is mental)
-      - by type (including mental exhaustion/sleep deprivation)
     - Craft
       - Item produced (category)
         - item produced (type)
@@ -282,6 +288,34 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
       - act
     - Split attention (improves mental resource)
       - combat awareness (keeping track of multiple foes)
+  - Mental Control:
+    - Growth
+    - Teamwork
+  - Determined Passive Mental Defense: ?!
+    - Resist Mental Damage/Debufs (pain is mental)
+      - by type (including mental exhaustion/sleep deprivation)
+  - Determined Active Mental Defense: ?!
+  - Determined Mental Offense ?!
+- Magical
+  - Power: (Force)
+    - Growth
+    - Transfer power (add or subtract, + speed)
+      - Spell
+      - Rune
+  - Speed (weave, still needs a better name)
+    - Growth
+  - Endurance
+    - Growth
+    - Enhance pool
+  - Control
+    - Growth
+    - Teamwork
+  - Determined Passive Defense
+    - Resistances
+  - Determined Active Defense
+    - Wards
+      - spell
+      - rune
 
 
 ### Crafting materials
