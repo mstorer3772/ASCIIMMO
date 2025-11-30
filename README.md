@@ -62,9 +62,9 @@ Each point in any given stat is a multiplicative 5% increase over the base/racia
 Each category will have some base value, and let the players modify the individual stats up or down.  During character creation, each up must be paid for with a down.  Max +2 for starting players, more later.
 
 Each category will have several stats that are determined based on the values in that category:
-Passive defense: endurance + strength
-Active defense: speed + control
-Offense Base: strength + speed
+- Passive defense: endurance + strength
+- Active defense: speed + control
+- Offense Base: strength + speed
 
 Resource: endurance plus a little of everything else
 - Physical Resource: Health
@@ -83,7 +83,7 @@ Mana level directly/linearly affects local monster/beast levels.  It's uncomfort
 
 ### Manas
 
-Like many things in ASCIIMMO, mana has categories and subcategories.
+Like many things in ASCIIMMO, mana has categories and subcategories (and sub-subcategories, and...).
 - Life (health, growth)
   - Plant
     - specise 
@@ -94,7 +94,7 @@ Like many things in ASCIIMMO, mana has categories and subcategories.
 - Mind
   - Decision
     - Control
-  - information (scrying)
+  - information/detection
   - Communication
 - Sense
   - Sight
@@ -135,8 +135,8 @@ Like many things in ASCIIMMO, mana has categories and subcategories.
 - Air (gases in general)
   - Weather
     - Storm
-  - oxygen, hydrogen, etc
-- Water (liquids in general?  Liquid stone?)
+  - oxygen, hydrogen, nitrogen, etc
+- Water (liquids in general?  Liquid stone? mercury?)
   - Fresh
   - Salt
 - Continuum
@@ -287,7 +287,12 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
 ### Crafting materials
 - wood
   - by tree
+- bark
+  - by tree
 - stem
+  - by plant
+- root
+  - by plant
 - leaf
   - by plant
 - fruit
@@ -302,6 +307,10 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
   - type (quartz, rhinestone)
 - metal
   - type (iron copper bronze tin etc)
+- fungus
+  - cap
+  - stalk
+  - spore
 - [mirror animal tags]
 
 ## Combat
@@ -311,3 +320,22 @@ Active defense skill vs offense skill. Base accuracy vs flat footed/unaware: 75 
 Penalty for aiming at specific targets (later!)
 If a blow lands, how-much-it-lands-by affects damage 
   Lands by X starts to add critical effects (bleed damage over time, broken bone debufs, depends on damage type)
+
+Damage determined by what they hit with & target resistence.  
+
+Improved by various skills (anatomy, technique)
+
+Invent repeatable text descriptions of combat actions based on skills used, success level/damage done.  "15.3 damage" could translate into "a glancing blow that nicks the target's arm" or "a crushing blow that shatters the target's forearm"  More damaging attacks will generally be to the target's torso/head/legs, while less damaging ones will be to limbs.  Crits that come with debufs could be described as hitting arteries or breaking bones.
+
+Teamwork skills (physical, mental, and magical)
+physical teamwork:  Tactics
+    offense teamwork: formation
+    defense teamwork: shield wall
+    ranged teamwork: volley
+    melee teamwork: pincer
+mental teamwork: organization
+    search teamwork: grid
+    crafting teamwork: assembly line
+magical teamwork: ritual
+
+
