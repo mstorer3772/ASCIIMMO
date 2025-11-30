@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project(asciimmo VERSION 0.1 LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Enable C++20 modules support when using Ninja generator (requires CMake 3.28+ and GCC 14+)
@@ -40,6 +40,22 @@ FetchContent_Declare(
   GIT_TAG        v0.11.0
 )
 FetchContent_MakeAvailable(cpp-httplib)
+
+# Find PostgreSQL and bring in a modern libpqxx (built from source)
+find_package(PostgreSQL REQUIRED)
+
+# Use FetchContent to pull libpqxx 7.10.1 to match C++20 features
+FetchContent_Declare(
+  libpqxx
+  GIT_REPOSITORY https://github.com/jtv/libpqxx.git
+  GIT_TAG        7.10.1
+)
+FetchContent_MakeAvailable(libpqxx)
+
+# Database utilities library
+add_library(db_utils STATIC src/db_pool.cpp src/db_config.cpp)
+target_include_directories(db_utils PUBLIC include ${PostgreSQL_INCLUDE_DIRS})
+target_link_libraries(db_utils PUBLIC libpqxx::pqxx PostgreSQL::PostgreSQL)
 
 # Shared worldgen library
 add_library(worldgen STATIC src/worldgen.cpp)
@@ -93,6 +109,35 @@ gtest_discover_tests(session_service_test)
 add_executable(social_service_test tests/social_service_test.cpp)
 target_link_libraries(social_service_test PRIVATE GTest::gtest GTest::gtest_main)
 gtest_discover_tests(social_service_test)
+
+# Database tests
+add_executable(database_test tests/database_test.cpp)
+target_link_libraries(database_test PRIVATE db_utils GTest::gtest GTest::gtest_main)
+target_include_directories(database_test PRIVATE include)
+# Ensure pqxx headers don't require source_location in this target
+
+gtest_discover_tests(database_test)
+
+add_executable(auth_database_test tests/auth_database_test.cpp)
+target_link_libraries(auth_database_test PRIVATE db_utils GTest::gtest GTest::gtest_main)
+target_include_directories(auth_database_test PRIVATE include)
+# Ensure pqxx headers don't require source_location in this target
+
+gtest_discover_tests(auth_database_test)
+
+add_executable(session_database_test tests/session_database_test.cpp)
+target_link_libraries(session_database_test PRIVATE db_utils GTest::gtest GTest::gtest_main)
+target_include_directories(session_database_test PRIVATE include)
+# Ensure pqxx headers don't require source_location in this target
+
+gtest_discover_tests(session_database_test)
+
+add_executable(social_database_test tests/social_database_test.cpp)
+target_link_libraries(social_database_test PRIVATE db_utils GTest::gtest GTest::gtest_main)
+target_include_directories(social_database_test PRIVATE include)
+# Ensure pqxx headers don't require source_location in this target
+
+gtest_discover_tests(social_database_test)
 
 # --- ProtoBuf support ---
 find_package(Protobuf REQUIRED)

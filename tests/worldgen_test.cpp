@@ -62,7 +62,7 @@ TEST(WorldGenTest, ContainsExpectedChars) {
     std::string map = gen.generate();
     
     // Should contain various terrain characters
-    bool hasWater = map.find('~') != std::string::npos || map.find('≈') != std::string::npos;
+    bool hasWater = map.find('~') != std::string::npos || map.find(',') != std::string::npos;
     bool hasLand = map.find('.') != std::string::npos || map.find('^') != std::string::npos;
     
     EXPECT_TRUE(hasWater || hasLand) << "Map should contain terrain characters";
