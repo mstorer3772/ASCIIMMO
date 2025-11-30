@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package social;
+
+service SocialService {
+  // Chat
+  rpc GetGlobalChat (GetGlobalChatRequest) returns (GetGlobalChatResponse);
+  rpc SendGlobalChat (SendGlobalChatRequest) returns (SendGlobalChatResponse);
+
+  // Friends
+  rpc GetFriends (GetFriendsRequest) returns (GetFriendsResponse);
+  rpc AddFriend (AddFriendRequest) returns (AddFriendResponse);
+
+  // Party
+  rpc CreateParty (CreatePartyRequest) returns (CreatePartyResponse);
+  rpc JoinParty (JoinPartyRequest) returns (JoinPartyResponse);
+  rpc GetParty (GetPartyRequest) returns (GetPartyResponse);
+
+  // Guild
+  rpc CreateGuild (CreateGuildRequest) returns (CreateGuildResponse);
+  rpc JoinGuild (JoinGuildRequest) returns (JoinGuildResponse);
+  rpc GetGuild (GetGuildRequest) returns (GetGuildResponse);
+}
+
+// Chat
+message GetGlobalChatRequest {
+  int32 limit = 1;
+}
+message ChatMessage {
+  string from = 1;
+  string message = 2;
+  int64 timestamp = 3;
+}
+message GetGlobalChatResponse {
+  repeated ChatMessage messages = 1;
+}
+message SendGlobalChatRequest {
+  string from = 1;
+  string message = 2;
+}
+message SendGlobalChatResponse {
+  string status = 1;
+}
+
+// Friends
+message GetFriendsRequest {
+  string user = 1;
+}
+message GetFriendsResponse {
+  string user = 1;
+  repeated string friends = 2;
+}
+message AddFriendRequest {
+  string user = 1;
+  string friend = 2;
+}
+message AddFriendResponse {
+  string status = 1;
+}
+
+// Party
+message CreatePartyRequest {
+  string leader = 1;
+}
+message CreatePartyResponse {
+  string status = 1;
+  string party_id = 2;
+}
+message JoinPartyRequest {
+  string party_id = 1;
+  string user = 2;
+}
+message JoinPartyResponse {
+  string status = 1;
+}
+message GetPartyRequest {
+  string party_id = 1;
+}
+message GetPartyResponse {
+  string party_id = 1;
+  string leader = 2;
+  repeated string members = 3;
+}
+
+// Guild
+message CreateGuildRequest {
+  string name = 1;
+  string leader = 2;
+}
+message CreateGuildResponse {
+  string status = 1;
+  string guild_id = 2;
+}
+message JoinGuildRequest {
+  string guild_id = 1;
+  string user = 2;
+}
+message JoinGuildResponse {
+  string status = 1;
+}
+message GetGuildRequest {
+  string guild_id = 1;
+}
+message GetGuildResponse {
+  string guild_id = 1;
+  string name = 2;
+  string leader = 3;
+  repeated string members = 4;
+}

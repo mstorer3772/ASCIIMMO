@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package session;
+
+service SessionService {
+  rpc GetSession (SessionGetRequest) returns (SessionGetResponse);
+  rpc CreateSession (SessionCreateRequest) returns (SessionCreateResponse);
+  rpc Health (HealthRequest) returns (HealthResponse);
+}
+
+message SessionGetRequest {
+  string token = 1;
+}
+
+message SessionGetResponse {
+  string status = 1;
+  string data = 2;
+}
+
+message SessionCreateRequest {
+  string data = 1;
+}
+
+message SessionCreateResponse {
+  string status = 1;
+  string token = 2;
+}
+
+message HealthRequest {}
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+}

@@ -1,5 +1,8 @@
 # Build
 /build/
+/build-release/
+/build-debug/
+/build-ninja/
 
 # CMake generated files & folders (when not inside build/)
 /CMakeCache.txt
