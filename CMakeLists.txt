@@ -59,16 +59,40 @@ target_include_directories(session-service PRIVATE include ${cpp-httplib_SOURCE_
 add_executable(social-service src/social_service.cpp)
 target_include_directories(social-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
 
-# Legacy monolithic binary (optional; can be removed later)
-add_executable(asciimmo-server
-  src/main.cpp
-  src/worldgen.cpp
-  src/server_http.cpp
-)
-target_include_directories(asciimmo-server PRIVATE include ${cpp-httplib_SOURCE_DIR})
-
 # Install rules
-install(TARGETS world-service auth-service session-service social-service asciimmo-server RUNTIME DESTINATION bin)
+install(TARGETS world-service auth-service session-service social-service RUNTIME DESTINATION bin)
+
+# --- Testing with Google Test ---
+enable_testing()
+find_package(GTest REQUIRED)
+include(GoogleTest)
+
+# WorldGen tests
+add_executable(worldgen_test tests/worldgen_test.cpp)
+target_link_libraries(worldgen_test PRIVATE worldgen GTest::gtest GTest::gtest_main)
+target_include_directories(worldgen_test PRIVATE include)
+gtest_discover_tests(worldgen_test)
+
+# World service tests
+add_executable(world_service_test tests/world_service_test.cpp)
+target_link_libraries(world_service_test PRIVATE worldgen GTest::gtest GTest::gtest_main)
+target_include_directories(world_service_test PRIVATE include)
+gtest_discover_tests(world_service_test)
+
+# Auth service tests
+add_executable(auth_service_test tests/auth_service_test.cpp)
+target_link_libraries(auth_service_test PRIVATE GTest::gtest GTest::gtest_main)
+gtest_discover_tests(auth_service_test)
+
+# Session service tests
+add_executable(session_service_test tests/session_service_test.cpp)
+target_link_libraries(session_service_test PRIVATE GTest::gtest GTest::gtest_main)
+gtest_discover_tests(session_service_test)
+
+# Social service tests
+add_executable(social_service_test tests/social_service_test.cpp)
+target_link_libraries(social_service_test PRIVATE GTest::gtest GTest::gtest_main)
+gtest_discover_tests(social_service_test)
 
 # --- ProtoBuf support ---
 find_package(Protobuf REQUIRED)

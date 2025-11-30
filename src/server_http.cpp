@@ -6,17 +6,20 @@
 
 namespace asciimmo {
 
-void run_http_server(int port, unsigned long long default_seed, int default_width, int default_height) {
+void run_http_server(int port, uint64_t seed, int width, int height) {
     httplib::Server svr;
 
-    svr.Get("/world", [default_seed, default_width, default_height](const httplib::Request& req, httplib::Response& res) {
-        unsigned long long seed = default_seed;
-        int width = default_width;
-        int height = default_height;
+    svr.Get("/world", [&seed, &width, &height](const httplib::Request& req, httplib::Response& res) {
         try {
-            if (req.has_param("seed")) seed = std::stoull(req.get_param_value("seed"));
-            if (req.has_param("width")) width = std::stoi(req.get_param_value("width"));
-            if (req.has_param("height")) height = std::stoi(req.get_param_value("height"));
+            if (req.has_param("seed")) {
+                seed = std::stoull(req.get_param_value("seed"));
+            }
+            if (req.has_param("width")) {
+                width = std::stoi(req.get_param_value("width"));
+            }
+            if (req.has_param("height")) {
+                height = std::stoi(req.get_param_value("height"));
+            }
         } catch (...) {
             // ignore parse errors and fall back to defaults
         }
