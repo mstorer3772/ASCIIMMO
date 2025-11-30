@@ -31,6 +31,11 @@
 # Generated client world (for quick testing)
 client/world.txt
 
+# Client build artifacts
+client/node_modules/
+client/bundle.js
+client/package-lock.json
+
 # Logs / crash dumps
 *.log
 *.trace

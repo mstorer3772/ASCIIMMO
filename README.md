@@ -243,6 +243,7 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
   - balance
   - footwork
   - acrobatics
+  - stealth
 - Determined Passive defense:
   - Resist Physical damage
     - by damage type (cut, pierce, crush, burn, acid)
@@ -269,12 +270,18 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
       - Mana gathering
     - Resist Mental Debufs (pain is mental)
       - by type (including mental exhaustion/sleep deprivation)
+    - Craft
+      - Item produced (category)
+        - item produced (type)
+          - specific recipe
+      - Materials (dupe material tag tree)
   - Mental Speed:
     - Growth
     - Notice/search?
     - lie
       - act
     - Split attention (improves mental resource)
+      - combat awareness (keeping track of multiple foes)
 
 
 ### Crafting materials
@@ -299,3 +306,8 @@ RNG(skill ID & player seed) == skill affinity (statistical bell curve distributi
 
 ## Combat
 
+Active defense skill vs offense skill. Base accuracy vs flat footed/unaware: 75 %
+
+Penalty for aiming at specific targets (later!)
+If a blow lands, how-much-it-lands-by affects damage 
+  Lands by X starts to add critical effects (bleed damage over time, broken bone debufs, depends on damage type)

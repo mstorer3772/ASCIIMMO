@@ -74,25 +74,79 @@ install(TARGETS world-service auth-service session-service social-service asciim
 find_package(Protobuf REQUIRED)
 file(GLOB PROTO_FILES "${CMAKE_SOURCE_DIR}/proto/*.proto")
 
-# C++ output
+# C++ output - generate per-file custom commands for proper dependency tracking
 set(PROTO_CPP_OUT_DIR "${CMAKE_SOURCE_DIR}/src/proto")
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
-add_custom_command(
-  OUTPUT ${PROTO_SRCS} ${PROTO_HDRS}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_CPP_OUT_DIR}
-  COMMAND ${Protobuf_PROTOC_EXECUTABLE} --cpp_out=${PROTO_CPP_OUT_DIR} -I ${CMAKE_SOURCE_DIR}/proto ${PROTO_FILES}
-  DEPENDS ${PROTO_FILES}
-  COMMENT "Compiling .proto files to C++ sources"
-)
+set(PROTO_SRCS)
+set(PROTO_HDRS)
+foreach(PROTO_FILE ${PROTO_FILES})
+  get_filename_component(PROTO_NAME ${PROTO_FILE} NAME_WE)
+  set(PROTO_SRC "${PROTO_CPP_OUT_DIR}/${PROTO_NAME}.pb.cc")
+  set(PROTO_HDR "${PROTO_CPP_OUT_DIR}/${PROTO_NAME}.pb.h")
+  
+  add_custom_command(
+    OUTPUT ${PROTO_SRC} ${PROTO_HDR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_CPP_OUT_DIR}
+    COMMAND ${Protobuf_PROTOC_EXECUTABLE} --cpp_out=${PROTO_CPP_OUT_DIR} -I ${CMAKE_SOURCE_DIR}/proto ${PROTO_FILE}
+    DEPENDS ${PROTO_FILE}
+    COMMENT "Compiling ${PROTO_NAME}.proto to C++"
+  )
+  
+  list(APPEND PROTO_SRCS ${PROTO_SRC})
+  list(APPEND PROTO_HDRS ${PROTO_HDR})
+endforeach()
 add_custom_target(proto_cpp ALL DEPENDS ${PROTO_SRCS} ${PROTO_HDRS})
 
-# JS output
+# JS output (optional; requires protoc-gen-js plugin)
 set(PROTO_JS_OUT_DIR "${CMAKE_SOURCE_DIR}/client/proto")
-add_custom_command(
-  OUTPUT js_proto_gen
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_JS_OUT_DIR}
-  COMMAND ${Protobuf_PROTOC_EXECUTABLE} --js_out=import_style=commonjs,binary:${PROTO_JS_OUT_DIR} -I ${CMAKE_SOURCE_DIR}/proto ${PROTO_FILES}
-  DEPENDS ${PROTO_FILES}
-  COMMENT "Compiling .proto files to JS sources"
-)
-add_custom_target(proto_js ALL DEPENDS js_proto_gen)
+find_program(PROTOC_GEN_JS_EXECUTABLE NAMES protoc-gen-js)
+if(PROTOC_GEN_JS_EXECUTABLE)
+  set(PROTO_JS_FILES)
+  foreach(PROTO_FILE ${PROTO_FILES})
+    get_filename_component(PROTO_NAME ${PROTO_FILE} NAME_WE)
+    set(PROTO_JS "${PROTO_JS_OUT_DIR}/${PROTO_NAME}_pb.js")
+    
+    add_custom_command(
+      OUTPUT ${PROTO_JS}
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_JS_OUT_DIR}
+      COMMAND ${Protobuf_PROTOC_EXECUTABLE} --plugin=protoc-gen-js=${PROTOC_GEN_JS_EXECUTABLE} --js_out=import_style=commonjs,binary:${PROTO_JS_OUT_DIR} -I ${CMAKE_SOURCE_DIR}/proto ${PROTO_FILE}
+      DEPENDS ${PROTO_FILE}
+      COMMENT "Compiling ${PROTO_NAME}.proto to JS"
+    )
+    
+    list(APPEND PROTO_JS_FILES ${PROTO_JS})
+  endforeach()
+  add_custom_target(proto_js ALL DEPENDS ${PROTO_JS_FILES})
+else()
+  message(WARNING "protoc-gen-js not found; skipping JS proto generation. Install via: npm install -g protoc-gen-js")
+endif()
+
+# --- Client build (npm) ---
+find_program(NPM_EXECUTABLE NAMES npm)
+if(NPM_EXECUTABLE)
+  set(CLIENT_DIR "${CMAKE_SOURCE_DIR}/client")
+  set(CLIENT_BUNDLE "${CLIENT_DIR}/bundle.js")
+  file(GLOB_RECURSE CLIENT_SOURCES 
+    "${CLIENT_DIR}/app.js"
+    "${CLIENT_DIR}/index.html"
+    "${CLIENT_DIR}/package.json"
+  )
+  # Add proto JS files as dependencies
+  list(APPEND CLIENT_SOURCES ${PROTO_JS_FILES})
+  
+  add_custom_command(
+    OUTPUT ${CLIENT_BUNDLE}
+    COMMAND ${NPM_EXECUTABLE} install
+    COMMAND ${NPM_EXECUTABLE} run build
+    WORKING_DIRECTORY ${CLIENT_DIR}
+    DEPENDS ${CLIENT_SOURCES}
+    COMMENT "Building client bundle with npm"
+  )
+  add_custom_target(client_build ALL DEPENDS ${CLIENT_BUNDLE})
+  
+  # Make client depend on proto_js if available
+  if(TARGET proto_js)
+    add_dependencies(client_build proto_js)
+  endif()
+else()
+  message(WARNING "npm not found; skipping client build. Install Node.js to enable client bundling.")
+endif()
