@@ -1,22 +1,42 @@
 #include "shared/http_server.hpp"
 #include "shared/logger.hpp"
+#include "shared/service_config.hpp"
 #include <iostream>
 #include <string>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
 
 static void print_usage(const char* prog) {
-    std::cerr << "Usage: " << prog << " [--port P] [--cert FILE] [--key FILE]\n";
+    std::cerr << "Usage: " << prog << " [--config FILE] [--port P] [--cert FILE] [--key FILE]\n";
+    std::cerr << "  Config file defaults to config/services.yaml\n";
+    std::cerr << "  Command line options override config file values\n";
 }
 
 int main(int argc, char** argv) {
-    int port = 8081;
-    std::string cert_file = "certs/server.crt";
-    std::string key_file = "certs/server.key";
+    // Load configuration
+    auto& config = asciimmo::config::ServiceConfig::instance();
+    std::string config_file = "config/services.yaml";
+    
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--config" && i + 1 < argc) {
+            config_file = argv[++i];
+            break;
+        }
+    }
+    
+    if (!config.load(config_file)) {
+        std::cerr << "Warning: Could not load config file: " << config_file << std::endl;
+    }
+    
+    int port = config.get_int("auth_service.port", 8081);
+    std::string cert_file = config.get_string("global.cert_file", "certs/server.crt");
+    std::string key_file = config.get_string("global.key_file", "certs/server.key");
 
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
-        if (a == "--port" && i + 1 < argc) {
+        if (a == "--config") {
+            ++i;
+        } else if (a == "--port" && i + 1 < argc) {
             port = std::stoi(argv[++i]);
         } else if (a == "--cert" && i + 1 < argc) {
             cert_file = argv[++i];

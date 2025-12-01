@@ -95,6 +95,12 @@ target_link_libraries(worldgen_test PRIVATE worldgen GTest::gtest GTest::gtest_m
 target_include_directories(worldgen_test PRIVATE include)
 gtest_discover_tests(worldgen_test)
 
+# TokenCache tests
+add_executable(token_cache_test tests/token_cache_test.cpp)
+target_link_libraries(token_cache_test PRIVATE GTest::gtest GTest::gtest_main)
+target_include_directories(token_cache_test PRIVATE include)
+gtest_discover_tests(token_cache_test)
+
 # World service tests
 add_executable(world_service_test tests/world_service_test.cpp)
 target_link_libraries(world_service_test PRIVATE worldgen GTest::gtest GTest::gtest_main)

@@ -1,6 +1,7 @@
 #include "shared/http_server.hpp"
 #include "shared/logger.hpp"
 #include "shared/token_cache.hpp"
+#include "shared/service_config.hpp"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -11,7 +12,9 @@
 #include <boost/asio/signal_set.hpp>
 
 static void print_usage(const char* prog) {
-    std::cerr << "Usage: " << prog << " [--port P] [--cert FILE] [--key FILE]\n";
+    std::cerr << "Usage: " << prog << " [--config FILE] [--port P] [--cert FILE] [--key FILE]\n";
+    std::cerr << "  Config file defaults to config/services.yaml\n";
+    std::cerr << "  Command line options override config file values\n";
 }
 
 // In-memory data structures (ephemeral; replace with persistent storage)
@@ -53,14 +56,39 @@ static std::string get_param(const std::string& target, const std::string& key) 
     return query.substr(start, end == std::string::npos ? std::string::npos : end - start);
 }
 
+// Validate session token
+static bool validate_session_token(const std::string& target, asciimmo::auth::TokenCache& cache) {
+    std::string token = get_param(target, "session_token");
+    if (token.empty()) return false;
+    std::string user_data;
+    return cache.validate_token(token, user_data);
+}
+
 int main(int argc, char** argv) {
-    int port = 8083;
-    std::string cert_file = "certs/server.crt";
-    std::string key_file = "certs/server.key";
+    // Load configuration
+    auto& config = asciimmo::config::ServiceConfig::instance();
+    std::string config_file = "config/services.yaml";
+    
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--config" && i + 1 < argc) {
+            config_file = argv[++i];
+            break;
+        }
+    }
+    
+    if (!config.load(config_file)) {
+        std::cerr << "Warning: Could not load config file: " << config_file << std::endl;
+    }
+    
+    int port = config.get_int("social_service.port", 8083);
+    std::string cert_file = config.get_string("global.cert_file", "certs/server.crt");
+    std::string key_file = config.get_string("global.key_file", "certs/server.key");
 
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
-        if (a == "--port" && i + 1 < argc) {
+        if (a == "--config") {
+            ++i;
+        } else if (a == "--port" && i + 1 < argc) {
             port = std::stoi(argv[++i]);
         } else if (a == "--cert" && i + 1 < argc) {
             cert_file = argv[++i];
@@ -104,10 +132,19 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // GET /chat/global?limit=N - retrieve recent global chat messages
-    svr.get("/chat/global", [](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
-        int limit = 50;
+    // GET /chat/global?session_token=xxx&limit=N - retrieve recent global chat messages
+    svr.get("/chat/global", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
         std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
+        int limit = 50;
         auto limit_str = get_param(target, "limit");
         if (!limit_str.empty()) {
             try { limit = std::stoi(limit_str); } catch(...) {}
@@ -126,8 +163,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // POST /chat/global - send a message (expects {"from":"...", "message":"..."})
-    svr.post("/chat/global", [](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
+    // POST /chat/global?session_token=xxx - send a message (expects {"from":"...", "message":"..."})
+    svr.post("/chat/global", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         // TODO: parse JSON properly; stub: extract from body
         std::lock_guard<std::mutex> lock(data_mtx);
         ChatMessage msg;
@@ -140,8 +187,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // GET /friends/:user - get friend list for user
-    svr.get(R"(/friends/(\w+))", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch& matches) {
+    // GET /friends/:user?session_token=xxx - get friend list for user
+    svr.get(R"(/friends/(\w+))", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch& matches) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         std::string user = matches[1].str();
         std::lock_guard<std::mutex> lock(data_mtx);
         auto it = friends.find(user);
@@ -160,8 +217,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // POST /friends/:user/add - add friend (expects {"friend":"..."})
-    svr.post(R"(/friends/(\w+)/add)", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch& matches) {
+    // POST /friends/:user/add?session_token=xxx - add friend (expects {"friend":"..."})
+    svr.post(R"(/friends/(\w+)/add)", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch& matches) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         std::string user = matches[1].str();
         std::string friend_name = "friend"; // TODO: parse JSON
         std::lock_guard<std::mutex> lock(data_mtx);
@@ -171,8 +238,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // POST /party/create - create a party (expects {"leader":"..."})
-    svr.post("/party/create", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch&) {
+    // POST /party/create?session_token=xxx - create a party (expects {"leader":"..."})
+    svr.post("/party/create", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         std::string leader = "leader"; // TODO: parse JSON
         std::string party_id = "party-" + std::to_string(std::hash<std::string>{}(leader + std::to_string(std::time(nullptr))));
         std::lock_guard<std::mutex> lock(data_mtx);
@@ -185,8 +262,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // POST /party/:id/join - join a party (expects {"user":"..."})
-    svr.post(R"(/party/([\w-]+)/join)", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch& matches) {
+    // POST /party/:id/join?session_token=xxx - join a party (expects {"user":"..."})
+    svr.post(R"(/party/([\w-]+)/join)", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch& matches) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         std::string party_id = matches[1].str();
         std::string user = "user"; // TODO: parse JSON
         std::lock_guard<std::mutex> lock(data_mtx);
@@ -202,8 +289,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // GET /party/:id - get party info
-    svr.get(R"(/party/([\w-]+))", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch& matches) {
+    // GET /party/:id?session_token=xxx - get party info
+    svr.get(R"(/party/([\w-]+))", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch& matches) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         std::string party_id = matches[1].str();
         std::lock_guard<std::mutex> lock(data_mtx);
         auto it = parties.find(party_id);
@@ -225,8 +322,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // POST /guild/create - create a guild (expects {"name":"...", "leader":"..."})
-    svr.post("/guild/create", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch&) {
+    // POST /guild/create?session_token=xxx - create a guild (expects {"name":"...", "leader":"..."})
+    svr.post("/guild/create", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         std::string name = "guild"; // TODO: parse JSON
         std::string leader = "leader";
         std::string guild_id = "guild-" + name;
@@ -241,8 +348,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // POST /guild/:id/join - join a guild (expects {"user":"..."})
-    svr.post(R"(/guild/([\w-]+)/join)", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch& matches) {
+    // POST /guild/:id/join?session_token=xxx - join a guild (expects {"user":"..."})
+    svr.post(R"(/guild/([\w-]+)/join)", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch& matches) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         std::string guild_id = matches[1].str();
         std::string user = "user"; // TODO: parse JSON
         std::lock_guard<std::mutex> lock(data_mtx);
@@ -258,8 +375,18 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    // GET /guild/:id - get guild info
-    svr.get(R"(/guild/([\w-]+))", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch& matches) {
+    // GET /guild/:id?session_token=xxx - get guild info
+    svr.get(R"(/guild/([\w-]+))", [&token_cache](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch& matches) {
+        std::string target(req.target());
+        
+        // Validate session token
+        if (!validate_session_token(target, token_cache)) {
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+        }
+        
         std::string guild_id = matches[1].str();
         std::lock_guard<std::mutex> lock(data_mtx);
         auto it = guilds.find(guild_id);
@@ -281,7 +408,8 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    svr.get("/health", [](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch&) {
+    svr.get("/health", [](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
+        // Health endpoint doesn't require session token
         res.result(boost::beast::http::status::ok);
         res.body() = R"({"status":"ok","service":"social"})";
         res.prepare_payload();

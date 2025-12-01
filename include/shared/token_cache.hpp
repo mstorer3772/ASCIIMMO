@@ -9,7 +9,6 @@ namespace asciimmo {
 namespace auth {
 
 struct TokenInfo {
-    std::string user_data;
     std::chrono::steady_clock::time_point expires_at;
     
     bool is_valid() const {
@@ -20,21 +19,18 @@ struct TokenInfo {
 class TokenCache {
 public:
     // Add or update a token with 15 minute expiration
-    void add_token(const std::string& token, const std::string& user_data) {
+    void add_token(const std::string& token, int expirationMinutes = 15) {
         std::lock_guard<std::mutex> lock(mtx_);
-        auto expires = std::chrono::steady_clock::now() + std::chrono::minutes(15);
-        cache_[token] = TokenInfo{user_data, expires};
+        auto expires = std::chrono::steady_clock::now() + std::chrono::minutes(expirationMinutes);
+        cache_[token] = TokenInfo{expires};
     }
     
     // Check if token is valid and return user data
-    bool validate_token(const std::string& token, std::string& user_data) {
+    bool validate_token(const std::string& token) {
         std::lock_guard<std::mutex> lock(mtx_);
         auto it = cache_.find(token);
-        if (it != cache_.end() && it->second.is_valid()) {
-            user_data = it->second.user_data;
-            return true;
-        }
-        return false;
+
+        return (it != cache_.end() && it->second.is_valid());
     }
     
     // Remove expired tokens (periodic cleanup)

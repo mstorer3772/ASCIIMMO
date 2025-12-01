@@ -1,0 +1,48 @@
+# ASCIIMMO Services Configuration
+# All microservices read from this file
+
+# Global settings
+global:
+  cert_file: "certs/server.crt"
+  key_file: "certs/server.key"
+  log_level: "INFO"  # FATAL, ERROR, WARNING, INFO, DEBUG, VERBOSE
+
+# World Service
+world_service:
+  port: 8080
+  needs_session: true
+  default_seed: 12345
+  default_width: 80
+  default_height: 24
+
+# Auth Service
+auth_service:
+  port: 8081
+  needs_session: false
+
+# Session Service
+session_service:
+  port: 8082
+  needs_session: false
+  # Services to broadcast tokens to
+  broadcast_targets:
+    - host: "localhost"
+      port: 8080
+      name: "world-service"
+    - host: "localhost"
+      port: 8083
+      name: "social-service"
+  token_ttl: 900  # 15 minutes in seconds
+# Social Service
+social_service:
+  port: 8083
+  needs_session: truece:
+  port: 8083
+
+# Database configuration (if needed)
+database:
+  host: "localhost"
+  port: 5432
+  name: "asciimmo"
+  user: "asciimmo"
+  # password should come from environment variable: ASCIIMMO_DB_PASSWORD
