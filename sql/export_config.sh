@@ -3,3 +3,5 @@ export ASCIIMMO_DB_PORT=5432
 export ASCIIMMO_DB_NAME=asciimmo
 export ASCIIMMO_DB_USER=asciimmo_user
 export ASCIIMMO_DB_PASSWORD=asciimmo_dev_password
+
+echo Exported!

@@ -210,6 +210,11 @@ int main(int argc, char** argv) {
         res.set_content("{\"status\":\"ok\",\"service\":\"social\"}", "application/json");
     });
 
+    svr.Post("/shutdown", [&svr](const httplib::Request&, httplib::Response& res) {
+        res.set_content("{\"status\":\"ok\",\"message\":\"shutting down\"}", "application/json");
+        svr.stop();
+    });
+
     std::cout << "[social-service] listening on port " << port << "\n";
     svr.listen("0.0.0.0", port);
     return 0;
