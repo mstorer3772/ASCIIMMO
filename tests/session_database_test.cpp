@@ -18,9 +18,9 @@ protected:
         // Create test user
         auto conn = pool_->acquire();
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-            "test_session_user", "hash"
+            pqxx::params{"test_session_user", "hash"}
         );
         test_user_id_ = result[0][0].as<int>();
         txn.commit();
@@ -30,7 +30,7 @@ protected:
         if (pool_) {
             auto conn = pool_->acquire();
             pqxx::work txn(conn.get());
-            txn.exec_params("DELETE FROM users WHERE id = $1", test_user_id_);
+            txn.exec("DELETE FROM users WHERE id = $1", pqxx::params{test_user_id_});
             txn.commit();
         }
         pool_.reset();
@@ -48,11 +48,11 @@ TEST_F(SessionDatabaseTest, CreateSession) {
     std::string token = "test_token_12345";
     std::string data = R"({"user":"test","role":"player"})";
     
-    auto result = txn.exec_params(
+    auto result = txn.exec(
         "INSERT INTO sessions (token, user_id, data, expires_at) "
         "VALUES ($1, $2, $3::jsonb, CURRENT_TIMESTAMP + INTERVAL '1 hour') "
         "RETURNING id",
-        token, test_user_id_, data
+        pqxx::params{token, test_user_id_, data}
     );
     
     ASSERT_EQ(result.size(), 1);
@@ -70,10 +70,10 @@ TEST_F(SessionDatabaseTest, FindSessionByToken) {
     // Create session
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "INSERT INTO sessions (token, user_id, data, expires_at) "
             "VALUES ($1, $2, '{}'::jsonb, CURRENT_TIMESTAMP + INTERVAL '1 hour')",
-            token, test_user_id_
+            pqxx::params{token, test_user_id_}
         );
         txn.commit();
     }
@@ -81,9 +81,9 @@ TEST_F(SessionDatabaseTest, FindSessionByToken) {
     // Find session
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "SELECT token, user_id FROM sessions WHERE token = $1",
-            token
+            pqxx::params{token}
         );
         
         ASSERT_EQ(result.size(), 1);
@@ -100,10 +100,10 @@ TEST_F(SessionDatabaseTest, DeleteSession) {
     // Create session
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "INSERT INTO sessions (token, user_id, data, expires_at) "
             "VALUES ($1, $2, '{}'::jsonb, CURRENT_TIMESTAMP + INTERVAL '1 hour')",
-            token, test_user_id_
+            pqxx::params{token, test_user_id_}
         );
         txn.commit();
     }
@@ -111,9 +111,9 @@ TEST_F(SessionDatabaseTest, DeleteSession) {
     // Delete session
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "DELETE FROM sessions WHERE token = $1",
-            token
+            pqxx::params{token}
         );
         txn.commit();
         EXPECT_EQ(result.affected_rows(), 1);
@@ -122,9 +122,9 @@ TEST_F(SessionDatabaseTest, DeleteSession) {
     // Verify deletion
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "SELECT COUNT(*) FROM sessions WHERE token = $1",
-            token
+            pqxx::params{token}
         );
         EXPECT_EQ(result[0][0].as<int>(), 0);
     }
@@ -138,10 +138,10 @@ TEST_F(SessionDatabaseTest, SessionExpiration) {
     // Create expired session
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "INSERT INTO sessions (token, user_id, data, expires_at) "
             "VALUES ($1, $2, '{}'::jsonb, CURRENT_TIMESTAMP - INTERVAL '1 hour')",
-            token, test_user_id_
+            pqxx::params{token, test_user_id_}
         );
         txn.commit();
     }
@@ -149,9 +149,9 @@ TEST_F(SessionDatabaseTest, SessionExpiration) {
     // Check if session is expired
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "SELECT COUNT(*) FROM sessions WHERE token = $1 AND expires_at > CURRENT_TIMESTAMP",
-            token
+            pqxx::params{token}
         );
         EXPECT_EQ(result[0][0].as<int>(), 0) << "Expired session should not be found";
     }
@@ -163,11 +163,11 @@ TEST_F(SessionDatabaseTest, CleanupExpiredSessions) {
     // Create mix of valid and expired sessions
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "INSERT INTO sessions (token, user_id, data, expires_at) VALUES "
             "($1, $2, '{}'::jsonb, CURRENT_TIMESTAMP - INTERVAL '1 hour'), "
             "($3, $2, '{}'::jsonb, CURRENT_TIMESTAMP + INTERVAL '1 hour')",
-            "expired_token", test_user_id_, "valid_token"
+            pqxx::params{"expired_token", test_user_id_, "valid_token"}
         );
         txn.commit();
     }
@@ -184,9 +184,9 @@ TEST_F(SessionDatabaseTest, CleanupExpiredSessions) {
     // Verify only valid session remains
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "SELECT COUNT(*) FROM sessions WHERE user_id = $1",
-            test_user_id_
+            pqxx::params{test_user_id_}
         );
         EXPECT_EQ(result[0][0].as<int>(), 1);
     }
@@ -200,10 +200,10 @@ TEST_F(SessionDatabaseTest, UpdateSessionActivity) {
     // Create session
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "INSERT INTO sessions (token, user_id, data, expires_at) "
             "VALUES ($1, $2, '{}'::jsonb, CURRENT_TIMESTAMP + INTERVAL '1 hour')",
-            token, test_user_id_
+            pqxx::params{token, test_user_id_}
         );
         txn.commit();
     }
@@ -211,9 +211,9 @@ TEST_F(SessionDatabaseTest, UpdateSessionActivity) {
     // Update last activity
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "UPDATE sessions SET last_activity = CURRENT_TIMESTAMP WHERE token = $1",
-            token
+            pqxx::params{token}
         );
         txn.commit();
     }
@@ -221,9 +221,9 @@ TEST_F(SessionDatabaseTest, UpdateSessionActivity) {
     // Verify update
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "SELECT last_activity FROM sessions WHERE token = $1",
-            token
+            pqxx::params{token}
         );
         EXPECT_FALSE(result[0][0].is_null());
     }

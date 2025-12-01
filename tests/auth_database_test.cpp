@@ -38,9 +38,9 @@ TEST_F(AuthDatabaseTest, CreateUser) {
     std::string username = "test_user_create";
     std::string password_hash = "hashed_password_12345";
     
-    auto result = txn.exec_params(
+    auto result = txn.exec(
         "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-        username, password_hash
+        pqxx::params{username, password_hash}
     );
     
     ASSERT_EQ(result.size(), 1);
@@ -56,9 +56,9 @@ TEST_F(AuthDatabaseTest, FindUserByUsername) {
     // Insert test user
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
-            "test_user_find", "hashed_pass"
+            pqxx::params{"test_user_find", "hashed_pass"}
         );
         txn.commit();
     }
@@ -66,9 +66,9 @@ TEST_F(AuthDatabaseTest, FindUserByUsername) {
     // Find user
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "SELECT id, username, password_hash FROM users WHERE username = $1",
-            "test_user_find"
+            pqxx::params{"test_user_find"}
         );
         
         ASSERT_EQ(result.size(), 1);
@@ -84,9 +84,9 @@ TEST_F(AuthDatabaseTest, DeleteUser) {
     int user_id;
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-            "test_user_delete", "hash"
+            pqxx::params{"test_user_delete", "hash"}
         );
         user_id = result[0][0].as<int>();
         txn.commit();
@@ -95,9 +95,9 @@ TEST_F(AuthDatabaseTest, DeleteUser) {
     // Delete user
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "DELETE FROM users WHERE id = $1",
-            user_id
+            pqxx::params{user_id}
         );
         txn.commit();
         EXPECT_EQ(result.affected_rows(), 1);
@@ -106,9 +106,9 @@ TEST_F(AuthDatabaseTest, DeleteUser) {
     // Verify deletion
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "SELECT COUNT(*) FROM users WHERE id = $1",
-            user_id
+            pqxx::params{user_id}
         );
         EXPECT_EQ(result[0][0].as<int>(), 0);
     }
@@ -122,9 +122,9 @@ TEST_F(AuthDatabaseTest, UniqueUsernameConstraint) {
     // Insert first user
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
-            username, "hash1"
+            pqxx::params{username, "hash1"}
         );
         txn.commit();
     }
@@ -132,9 +132,9 @@ TEST_F(AuthDatabaseTest, UniqueUsernameConstraint) {
     // Try to insert duplicate username
     EXPECT_THROW({
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
-            username, "hash2"
+            pqxx::params{username, "hash2"}
         );
         txn.commit();
     }, pqxx::unique_violation);
@@ -147,9 +147,9 @@ TEST_F(AuthDatabaseTest, UpdateLastLogin) {
     int user_id;
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-            "test_user_login", "hash"
+            pqxx::params{"test_user_login", "hash"}
         );
         user_id = result[0][0].as<int>();
         txn.commit();
@@ -158,9 +158,9 @@ TEST_F(AuthDatabaseTest, UpdateLastLogin) {
     // Update last_login
     {
         pqxx::work txn(conn.get());
-        txn.exec_params(
+        txn.exec(
             "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1",
-            user_id
+            pqxx::params{user_id}
         );
         txn.commit();
     }
@@ -168,9 +168,9 @@ TEST_F(AuthDatabaseTest, UpdateLastLogin) {
     // Verify update
     {
         pqxx::work txn(conn.get());
-        auto result = txn.exec_params(
+        auto result = txn.exec(
             "SELECT last_login FROM users WHERE id = $1",
-            user_id
+            pqxx::params{user_id}
         );
         EXPECT_FALSE(result[0][0].is_null()) << "last_login should be set";
     }
