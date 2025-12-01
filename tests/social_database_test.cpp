@@ -36,6 +36,9 @@ protected:
         if (pool_) {
             auto conn = pool_->acquire();
             pqxx::work txn(conn.get());
+            // Delete parties and guilds first (they reference users)
+            txn.exec("DELETE FROM parties WHERE leader_id IN (" + txn.quote(test_user1_id_) + ", " + txn.quote(test_user2_id_) + ")");
+            txn.exec("DELETE FROM guilds WHERE leader_id IN (" + txn.quote(test_user1_id_) + ", " + txn.quote(test_user2_id_) + ")");
             txn.exec_params("DELETE FROM users WHERE id IN ($1, $2)", 
                            test_user1_id_, test_user2_id_);
             txn.commit();

@@ -32,16 +32,14 @@ elseif(MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "/Od /Zi")
 endif()
 
-# Fetch cpp-httplib (single-header) for HTTP endpoints
-include(FetchContent)
-FetchContent_Declare(
-  cpp-httplib
-  GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-  GIT_TAG        v0.11.0
-)
-FetchContent_MakeAvailable(cpp-httplib)
+# Find Boost for Beast HTTP server and Asio async I/O
+find_package(Boost REQUIRED COMPONENTS system)
+
+# Find OpenSSL for HTTPS support
+find_package(OpenSSL REQUIRED)
 
 # Find PostgreSQL and bring in a modern libpqxx (built from source)
+include(FetchContent)
 find_package(PostgreSQL REQUIRED)
 
 # Use FetchContent to pull libpqxx 7.10.1 to match C++20 features
@@ -57,23 +55,31 @@ add_library(db_utils STATIC src/db_pool.cpp src/db_config.cpp)
 target_include_directories(db_utils PUBLIC include ${PostgreSQL_INCLUDE_DIRS})
 target_link_libraries(db_utils PUBLIC libpqxx::pqxx PostgreSQL::PostgreSQL)
 
+# Shared HTTP server library using Boost.Beast with HTTPS support
+add_library(http_server STATIC src/shared/http_server.cpp)
+target_include_directories(http_server PUBLIC include ${Boost_INCLUDE_DIRS})
+target_link_libraries(http_server PUBLIC Boost::system OpenSSL::SSL OpenSSL::Crypto)
+
 # Shared worldgen library
 add_library(worldgen STATIC src/worldgen.cpp)
 target_include_directories(worldgen PUBLIC include)
 
 # Microservice binaries
 add_executable(world-service src/world_service.cpp)
-target_include_directories(world-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
-target_link_libraries(world-service PRIVATE worldgen)
+target_include_directories(world-service PRIVATE include)
+target_link_libraries(world-service PRIVATE worldgen http_server Boost::system)
 
 add_executable(auth-service src/auth_service.cpp)
-target_include_directories(auth-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
+target_include_directories(auth-service PRIVATE include)
+target_link_libraries(auth-service PRIVATE http_server Boost::system)
 
 add_executable(session-service src/session_service.cpp)
-target_include_directories(session-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
+target_include_directories(session-service PRIVATE include)
+target_link_libraries(session-service PRIVATE http_server Boost::system)
 
 add_executable(social-service src/social_service.cpp)
-target_include_directories(social-service PRIVATE include ${cpp-httplib_SOURCE_DIR})
+target_include_directories(social-service PRIVATE include)
+target_link_libraries(social-service PRIVATE http_server Boost::system)
 
 # Install rules
 install(TARGETS world-service auth-service session-service social-service RUNTIME DESTINATION bin)
@@ -144,18 +150,22 @@ find_package(Protobuf REQUIRED)
 file(GLOB PROTO_FILES "${CMAKE_SOURCE_DIR}/proto/*.proto")
 
 # C++ output - generate per-file custom commands for proper dependency tracking
-set(PROTO_CPP_OUT_DIR "${CMAKE_SOURCE_DIR}/src/proto")
+set(PROTO_CPP_OUT_DIR "${CMAKE_SOURCE_DIR}/src/shared/proto")
+set(PROTO_HDR_OUT_DIR "${CMAKE_SOURCE_DIR}/include/shared/proto")
 set(PROTO_SRCS)
 set(PROTO_HDRS)
 foreach(PROTO_FILE ${PROTO_FILES})
   get_filename_component(PROTO_NAME ${PROTO_FILE} NAME_WE)
   set(PROTO_SRC "${PROTO_CPP_OUT_DIR}/${PROTO_NAME}.pb.cc")
-  set(PROTO_HDR "${PROTO_CPP_OUT_DIR}/${PROTO_NAME}.pb.h")
+  set(PROTO_HDR "${PROTO_HDR_OUT_DIR}/${PROTO_NAME}.pb.h")
   
   add_custom_command(
     OUTPUT ${PROTO_SRC} ${PROTO_HDR}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_CPP_OUT_DIR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_HDR_OUT_DIR}
     COMMAND ${Protobuf_PROTOC_EXECUTABLE} --cpp_out=${PROTO_CPP_OUT_DIR} -I ${CMAKE_SOURCE_DIR}/proto ${PROTO_FILE}
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_CPP_OUT_DIR}/${PROTO_NAME}.pb.h ${PROTO_HDR_OUT_DIR}/${PROTO_NAME}.pb.h
+    COMMAND ${CMAKE_COMMAND} -E remove ${PROTO_CPP_OUT_DIR}/${PROTO_NAME}.pb.h
     DEPENDS ${PROTO_FILE}
     COMMENT "Compiling ${PROTO_NAME}.proto to C++"
   )
