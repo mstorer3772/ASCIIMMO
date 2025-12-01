@@ -1,6 +1,7 @@
 #include "worldgen.hpp"
 #include "shared/http_server.hpp"
 #include "shared/logger.hpp"
+#include "shared/token_cache.hpp"
 #include <iostream>
 #include <string>
 #include <boost/asio/io_context.hpp>
@@ -57,6 +58,7 @@ int main(int argc, char** argv) {
     }
 
     asciimmo::log::Logger logger("world-service");
+    asciimmo::auth::TokenCache token_cache;
     
     boost::asio::io_context ioc;
     asciimmo::http::Server svr(ioc, port, cert_file, key_file);

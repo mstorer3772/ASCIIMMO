@@ -1,5 +1,6 @@
 #include "shared/http_server.hpp"
 #include "shared/logger.hpp"
+#include "shared/token_cache.hpp"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -75,11 +76,33 @@ int main(int argc, char** argv) {
     }
 
     asciimmo::log::Logger logger("social-service");
+    asciimmo::auth::TokenCache token_cache;
     
     boost::asio::io_context ioc;
     asciimmo::http::Server svr(ioc, port, cert_file, key_file);
 
     logger.info("Starting social-service on port " + std::to_string(port));
+
+    // Token registration endpoint (called by session service)
+    svr.post("/token/register", [&token_cache, &logger](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
+        // TODO: parse JSON properly; for now extract token from body
+        std::string body = req.body();
+        // Simple extraction (production should use proper JSON parser)
+        auto token_pos = body.find("\"token\":\"");
+        if (token_pos != std::string::npos) {
+            auto start = token_pos + 9;
+            auto end = body.find("\"", start);
+            std::string token = body.substr(start, end - start);
+            token_cache.add_token(token, body);
+            logger.info("Registered token: " + token);
+            res.result(boost::beast::http::status::ok);
+            res.body() = R"({"status":"ok"})";
+        } else {
+            res.result(boost::beast::http::status::bad_request);
+            res.body() = R"({"status":"error","message":"invalid request"})";
+        }
+        res.prepare_payload();
+    });
 
     // GET /chat/global?limit=N - retrieve recent global chat messages
     svr.get("/chat/global", [](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
