@@ -1,5 +1,6 @@
 #include "worldgen.hpp"
 #include "shared/http_server.hpp"
+#include "shared/logger.hpp"
 #include <iostream>
 #include <string>
 #include <boost/asio/io_context.hpp>
@@ -55,8 +56,12 @@ int main(int argc, char** argv) {
         }
     }
 
+    asciimmo::log::Logger logger("world-service");
+    
     boost::asio::io_context ioc;
     asciimmo::http::Server svr(ioc, port, cert_file, key_file);
+
+    logger.info("Starting world-service on port " + std::to_string(port));
 
     svr.get("/world", [default_seed, default_width, default_height](
         const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
@@ -91,20 +96,23 @@ int main(int argc, char** argv) {
         res.prepare_payload();
     });
 
-    svr.post("/shutdown", [&ioc](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch&) {
+    svr.post("/shutdown", [&ioc, &logger](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch&) {
+        logger.info("Shutdown requested via /shutdown endpoint");
         res.result(boost::beast::http::status::ok);
         res.body() = R"({"status":"ok","message":"shutting down"})";
         res.prepare_payload();
         ioc.stop();
     });
 
-    std::cout << "[world-service] listening on port " << port << "\n";
-    
     boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
-    signals.async_wait([&](auto, auto){ ioc.stop(); });
+    signals.async_wait([&](auto, auto){
+        logger.info("Shutdown signal received");
+        ioc.stop();
+    });
     
     svr.run();
     ioc.run();
     
+    logger.info("Service stopped");
     return 0;
 }

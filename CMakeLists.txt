@@ -21,7 +21,7 @@ endif()
 # Compiler flags for optimized release builds
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   # Release: aggressive optimizations, no debug info
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native -flto")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native -flto=auto")
   # RelWithDebInfo: optimizations + debug symbols
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
   # Debug: no optimizations, full debug info
