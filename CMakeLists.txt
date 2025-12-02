@@ -71,7 +71,7 @@ target_link_libraries(world-service PRIVATE worldgen http_server Boost::system)
 
 add_executable(auth-service src/auth_service.cpp)
 target_include_directories(auth-service PRIVATE include)
-target_link_libraries(auth-service PRIVATE http_server Boost::system)
+target_link_libraries(auth-service PRIVATE http_server db_utils pqxx Boost::system OpenSSL::SSL OpenSSL::Crypto)
 
 add_executable(session-service src/session_service.cpp)
 target_include_directories(session-service PRIVATE include)
@@ -109,7 +109,8 @@ gtest_discover_tests(world_service_test)
 
 # Auth service tests
 add_executable(auth_service_test tests/auth_service_test.cpp)
-target_link_libraries(auth_service_test PRIVATE GTest::gtest GTest::gtest_main)
+target_include_directories(auth_service_test PRIVATE include)
+target_link_libraries(auth_service_test PRIVATE GTest::gtest GTest::gtest_main db_utils pqxx OpenSSL::SSL OpenSSL::Crypto)
 gtest_discover_tests(auth_service_test)
 
 # Session service tests

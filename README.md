@@ -405,4 +405,4 @@ Three ways to go:
 2. each buff/debuf type has a timer, and more stacks just extend duration.  No change to effect.
 3. Kinda both.  Effects have a half-life, so stacking more increases duration and effect, but with diminishing returns... they wink out at some threshold.
 
-I'm thinking all three, varying by mana type.  
+I'm thinking all three, varying by mana type.  Initially, probably just #2.

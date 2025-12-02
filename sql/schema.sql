@@ -4,8 +4,8 @@
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    salt VARCHAR(255) NOT NULL,
+    password_hash BIGINT NOT NULL,
+    salt BIGINT NOT NULL,
     email VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP,
@@ -20,7 +20,7 @@ CREATE INDEX idx_users_email ON users(email);
 -- Sessions
 CREATE TABLE IF NOT EXISTS sessions (
     id SERIAL PRIMARY KEY,
-    token VARCHAR(255) UNIQUE NOT NULL,
+    token BIGINT UNIQUE NOT NULL,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     data JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -96,6 +96,20 @@ CREATE TABLE IF NOT EXISTS guild_members (
 
 CREATE INDEX idx_guild_members_guild ON guild_members(guild_id);
 CREATE INDEX idx_guild_members_user ON guild_members(user_id);
+
+-- Email confirmation tokens
+CREATE TABLE IF NOT EXISTS email_confirmation_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    token BIGINT UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE
+);
+
+CREATE INDEX idx_email_tokens_token ON email_confirmation_tokens(token);
+CREATE INDEX idx_email_tokens_user ON email_confirmation_tokens(user_id);
+CREATE INDEX idx_email_tokens_expires ON email_confirmation_tokens(expires_at);
 
 -- Session cleanup function (call periodically)
 CREATE OR REPLACE FUNCTION cleanup_expired_sessions()

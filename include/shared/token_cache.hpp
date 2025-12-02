@@ -1,7 +1,7 @@
 #pragma once
 
 #include "shared/logger.hpp"
-#include <string>
+#include <cstdint>
 #include <unordered_map>
 #include <mutex>
 #include <chrono>
@@ -20,14 +20,14 @@ struct TokenInfo {
 class TokenCache {
 public:
     // Add or update a token with 15 minute expiration
-    void add_token(const std::string& token, int expirationMinutes = 15) {
+    void add_token(uint64_t token, int expirationMinutes = 15) {
         std::lock_guard<std::mutex> lock(mtx_);
         auto expires = std::chrono::steady_clock::now() + std::chrono::minutes(expirationMinutes);
         cache_[token] = TokenInfo{expires};
     }
 
     // Check if token is valid and return user data
-    bool validate_token(const std::string& token) {
+    bool validate_token(uint64_t token) {
         std::lock_guard<std::mutex> lock(mtx_);
         auto it = cache_.find(token);
 
@@ -37,11 +37,11 @@ public:
 #else
         // Debug build: always return true, but log when token is invalid
         if (it == cache_.end()) {
-            logger_.info("Token validation bypassed (debug mode): token not found - " + token);
+            logger_.info("Token validation bypassed (debug mode): token not found - " + std::to_string(token));
             return true;
         }
         if (!it->second.is_valid()) {
-            logger_.info("Token validation bypassed (debug mode): token expired - " + token);
+            logger_.info("Token validation bypassed (debug mode): token expired - " + std::to_string(token));
             return true;
         }
         return true;
@@ -62,7 +62,7 @@ public:
     }
     
 private:
-    std::unordered_map<std::string, TokenInfo> cache_;
+    std::unordered_map<uint64_t, TokenInfo> cache_;
     std::mutex mtx_;
     log::Logger logger_{"TokenCache"};
 };

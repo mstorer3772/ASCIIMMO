@@ -31,9 +31,15 @@ static std::string get_param(const std::string& target, const std::string& key) 
 
 // Validate session token
 static bool validate_session_token(const std::string& target, asciimmo::auth::TokenCache& cache) {
-    std::string token = get_param(target, "session_token");
-    if (token.empty()) return false;
-    return cache.validate_token(token);
+    std::string token_str = get_param(target, "session_token");
+    if (token_str.empty()) return false;
+    
+    try {
+        uint64_t token = std::stoull(token_str);
+        return cache.validate_token(token);
+    } catch (...) {
+        return false;
+    }
 }
 
 int main(int argc, char** argv) {

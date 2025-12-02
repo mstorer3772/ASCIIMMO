@@ -58,11 +58,16 @@ static std::string get_param(const std::string& target, const std::string& key) 
 
 // Validate session token
 static bool validate_session_token(const std::string& target, asciimmo::auth::TokenCache& cache) {
-    std::string token = get_param(target, "session_token");
+    std::string token_str = get_param(target, "session_token");
 
-    if (token.empty()) return false;
+    if (token_str.empty()) return false;
 
-    return cache.validate_token(token);
+    try {
+        uint64_t token = std::stoull(token_str);
+        return cache.validate_token(token);
+    } catch (...) {
+        return false;
+    }
 }
 
 int main(int argc, char** argv) {
@@ -117,15 +122,23 @@ int main(int argc, char** argv) {
         // TODO: parse JSON properly; for now extract token from body
         std::string body = req.body();
         // Simple extraction (production should use proper JSON parser)
-        auto token_pos = body.find("\"token\":\"");
+        auto token_pos = body.find("\"token\":");
         if (token_pos != std::string::npos) {
-            auto start = token_pos + 9;
-            auto end = body.find("\"", start);
-            std::string token = body.substr(start, end - start);
-            token_cache.add_token(token);
-            logger.info("Registered token: " + token);
-            res.result(boost::beast::http::status::ok);
-            res.body() = R"({"status":"ok"})";
+            auto start = token_pos + 8;
+            // Skip whitespace
+            while (start < body.size() && (body[start] == ' ' || body[start] == '\"')) start++;
+            auto end = body.find_first_of(",}\"", start);
+            std::string token_str = body.substr(start, end - start);
+            try {
+                uint64_t token = std::stoull(token_str);
+                token_cache.add_token(token);
+                logger.info("Registered token: " + token_str);
+                res.result(boost::beast::http::status::ok);
+                res.body() = R"({"status":"ok"})";
+            } catch (...) {
+                res.result(boost::beast::http::status::bad_request);
+                res.body() = R"({"status":"error","message":"invalid token format"})";
+            }
         } else {
             res.result(boost::beast::http::status::bad_request);
             res.body() = R"({"status":"error","message":"invalid request"})";

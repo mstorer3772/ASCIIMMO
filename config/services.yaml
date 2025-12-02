@@ -18,6 +18,7 @@ world_service:
 # Auth Service
 auth_service:
   port: 8081
+  base_url: https://localhost:8081
   needs_session: false
 
 # Session Service
@@ -36,8 +37,7 @@ session_service:
 # Social Service
 social_service:
   port: 8083
-  needs_session: truece:
-  port: 8083
+  needs_session: true
 
 # Database configuration (if needed)
 database:
