@@ -18,12 +18,12 @@ static void print_usage(const char* prog) {
 static std::string get_param(const std::string& target, const std::string& key) {
     auto pos = target.find('?');
     if (pos == std::string::npos) return "";
-    
+
     std::string query = target.substr(pos + 1);
     std::string search = key + "=";
     pos = query.find(search);
     if (pos == std::string::npos) return "";
-    
+
     auto start = pos + search.length();
     auto end = query.find('&', start);
     return query.substr(start, end == std::string::npos ? std::string::npos : end - start);
@@ -33,8 +33,7 @@ static std::string get_param(const std::string& target, const std::string& key) 
 static bool validate_session_token(const std::string& target, asciimmo::auth::TokenCache& cache) {
     std::string token = get_param(target, "session_token");
     if (token.empty()) return false;
-    std::string user_data;
-    return cache.validate_token(token, user_data);
+    return cache.validate_token(token);
 }
 
 int main(int argc, char** argv) {
@@ -43,7 +42,7 @@ int main(int argc, char** argv) {
     // Load configuration
     auto& config = asciimmo::config::ServiceConfig::instance();
     std::string config_file = "config/services.yaml";
-    
+
     // Check for config file argument first
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "--config" && i + 1 < argc) {
@@ -51,7 +50,7 @@ int main(int argc, char** argv) {
             break;
         }
     }
-    
+
     if (!config.load(config_file)) {
         logger.warning("Could not load config file: " + config_file);
     }

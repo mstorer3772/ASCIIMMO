@@ -59,9 +59,10 @@ static std::string get_param(const std::string& target, const std::string& key) 
 // Validate session token
 static bool validate_session_token(const std::string& target, asciimmo::auth::TokenCache& cache) {
     std::string token = get_param(target, "session_token");
+
     if (token.empty()) return false;
-    std::string user_data;
-    return cache.validate_token(token, user_data);
+
+    return cache.validate_token(token);
 }
 
 int main(int argc, char** argv) {
@@ -121,7 +122,7 @@ int main(int argc, char** argv) {
             auto start = token_pos + 9;
             auto end = body.find("\"", start);
             std::string token = body.substr(start, end - start);
-            token_cache.add_token(token, body);
+            token_cache.add_token(token);
             logger.info("Registered token: " + token);
             res.result(boost::beast::http::status::ok);
             res.body() = R"({"status":"ok"})";

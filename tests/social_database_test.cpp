@@ -19,14 +19,14 @@ protected:
         auto conn = pool_->acquire();
         pqxx::work txn(conn.get());
         auto result1 = txn.exec(
-            "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-            pqxx::params{"test_social_user1", "hash"}
+            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+            pqxx::params{"test_social_user1", "hash", "test_salt"}
         );
         test_user1_id_ = result1[0][0].as<int>();
         
         auto result2 = txn.exec(
-            "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-            pqxx::params{"test_social_user2", "hash"}
+            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+            pqxx::params{"test_social_user2", "hash", "test_salt"}
         );
         test_user2_id_ = result2[0][0].as<int>();
         txn.commit();

@@ -5,10 +5,13 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    salt VARCHAR(255) NOT NULL,
     email VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN DEFAULT TRUE,
+    admin BOOLEAN DEFAULT FALSE,
+    email_confirmed BOOLEAN DEFAULT FALSE
 );
 
 CREATE INDEX idx_users_username ON users(username);

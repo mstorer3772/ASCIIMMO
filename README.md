@@ -151,6 +151,7 @@ Like many things in ASCIIMMO, mana has categories and subcategories (and sub-sub
 - Continuum
   - Space
   - Time
+  - gravity
 - Raw (not really a type?)
   - physical force (shields, attacks)
 
@@ -181,6 +182,7 @@ For typical animals/beasts/monsters
     - hide
     - scale
     - hair
+    - shell/carapace
   - limb
     - tail
     - wing
@@ -192,12 +194,14 @@ For typical animals/beasts/monsters
 - viscera
   - blood
   - organ
-    - heart/liver/stomach/lungs
+    - heart/liver/stomach/lungs/etc
 - sense
   - eye
   - ear
   - nose/snout
   - tongue
+  - touch (wiskers, skin again, but only a specific layer of it)
+  - others (magnetic, magic, heat, electric)
 - mana aspect
   (specific to species)
 
@@ -372,4 +376,33 @@ mental teamwork: organization
     crafting teamwork: assembly line
 magical teamwork: ritual
 
+## Classes
 
+Classes have minimum requirements.  Stats, skills, perhaps mana affinities and/or achievement requirements.  Yes there will be achievements.  Lots of them.  You must have already slain a dragon to be a dragon slayer.  You must have crafted a masterwork item to be a master craftsman... etc.  The more stuff you do and skills you gain, the more and better classes you can choose from.
+
+So classes improve the growth of some stats and some skills associated with them.  That's it.  No special abilities granted by classes.  Just growth bonuses.  Anyone can learn anything, but classes help you focus your growth in certain areas.
+
+Once you've advanced far enough in a class, you can prestige into a more advanced class.  Or you can multi-class, gaining the benefits of both classes.
+
+I'm thinking of having stat and skill growth slow on a logarithmic scale.  A given amount of XP through some equation (growth flattening the curve to some degree).  I also previously mentioned how skill growth rates are affected by the parent skill/stats.  So if you get good at some leaf skill far outstripping the parent skill, then raising the parent skill will actually improve the leaf as well.
+
+And keep in mind that you only learn your affinities for a skill or mana by learning it and seeing how fast you improve.  It's worty it to try a variety of things to find that skill you're crazy good at.
+
+## Training
+
+You can try to teach yourself just about anything, but having a decent teacher helps a lot. (x4?  Play around)
+
+You can only gain so much benefit from training in a given period of time, determined by your mental resource, "attention".  You also spend attention teaching others, and experimenting (untaught skill training, or going past a teachers ability).
+
+Teaching as long term buff?  Only takes you to a certain point, after which you have to experiment on your own.  It takes time to raise the level of a training buff based on teaching skill, time spent, and having a suitable environment (facilities, materials, peace and quiet or a training yard/dojo).
+
+Some skills are vastly harder to self-teach than others.  Combat skills are fairly easy to self-teach, while crafting and magic are much harder without a teacher.  (continuum manas)
+
+## Buff/debuff falloff
+
+Three ways to go:
+1. each individual buff/debuf has its own duration timer.  Effects stack linearly
+2. each buff/debuf type has a timer, and more stacks just extend duration.  No change to effect.
+3. Kinda both.  Effects have a half-life, so stacking more increases duration and effect, but with diminishing returns... they wink out at some threshold.
+
+I'm thinking all three, varying by mana type.  

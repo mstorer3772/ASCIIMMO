@@ -1,5 +1,6 @@
 #pragma once
 
+#include "shared/logger.hpp"
 #include <string>
 #include <unordered_map>
 #include <mutex>
@@ -24,13 +25,27 @@ public:
         auto expires = std::chrono::steady_clock::now() + std::chrono::minutes(expirationMinutes);
         cache_[token] = TokenInfo{expires};
     }
-    
+
     // Check if token is valid and return user data
     bool validate_token(const std::string& token) {
         std::lock_guard<std::mutex> lock(mtx_);
         auto it = cache_.find(token);
 
+#ifdef NDEBUG
+        // Release build: enforce token validation
         return (it != cache_.end() && it->second.is_valid());
+#else
+        // Debug build: always return true, but log when token is invalid
+        if (it == cache_.end()) {
+            logger_.info("Token validation bypassed (debug mode): token not found - " + token);
+            return true;
+        }
+        if (!it->second.is_valid()) {
+            logger_.info("Token validation bypassed (debug mode): token expired - " + token);
+            return true;
+        }
+        return true;
+#endif
     }
     
     // Remove expired tokens (periodic cleanup)
@@ -49,6 +64,7 @@ public:
 private:
     std::unordered_map<std::string, TokenInfo> cache_;
     std::mutex mtx_;
+    log::Logger logger_{"TokenCache"};
 };
 
 } // namespace auth

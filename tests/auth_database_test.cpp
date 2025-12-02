@@ -39,8 +39,8 @@ TEST_F(AuthDatabaseTest, CreateUser) {
     std::string password_hash = "hashed_password_12345";
     
     auto result = txn.exec(
-        "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-        pqxx::params{username, password_hash}
+        "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+        pqxx::params{username, password_hash, "test_salt"}
     );
     
     ASSERT_EQ(result.size(), 1);
@@ -57,8 +57,8 @@ TEST_F(AuthDatabaseTest, FindUserByUsername) {
     {
         pqxx::work txn(conn.get());
         txn.exec(
-            "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
-            pqxx::params{"test_user_find", "hashed_pass"}
+            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)",
+            pqxx::params{"test_user_find", "hashed_pass", "test_salt"}
         );
         txn.commit();
     }
@@ -85,8 +85,8 @@ TEST_F(AuthDatabaseTest, DeleteUser) {
     {
         pqxx::work txn(conn.get());
         auto result = txn.exec(
-            "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-            pqxx::params{"test_user_delete", "hash"}
+            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+            pqxx::params{"test_user_delete", "hash", "test_salt"}
         );
         user_id = result[0][0].as<int>();
         txn.commit();
@@ -123,8 +123,8 @@ TEST_F(AuthDatabaseTest, UniqueUsernameConstraint) {
     {
         pqxx::work txn(conn.get());
         txn.exec(
-            "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
-            pqxx::params{username, "hash1"}
+            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)",
+            pqxx::params{username, "hash1", "test_salt"}
         );
         txn.commit();
     }
@@ -133,8 +133,8 @@ TEST_F(AuthDatabaseTest, UniqueUsernameConstraint) {
     EXPECT_THROW({
         pqxx::work txn(conn.get());
         txn.exec(
-            "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
-            pqxx::params{username, "hash2"}
+            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)",
+            pqxx::params{username, "hash2", "test_salt"}
         );
         txn.commit();
     }, pqxx::unique_violation);
@@ -148,8 +148,8 @@ TEST_F(AuthDatabaseTest, UpdateLastLogin) {
     {
         pqxx::work txn(conn.get());
         auto result = txn.exec(
-            "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-            pqxx::params{"test_user_login", "hash"}
+            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+            pqxx::params{"test_user_login", "hash", "test_salt"}
         );
         user_id = result[0][0].as<int>();
         txn.commit();

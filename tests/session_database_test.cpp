@@ -19,8 +19,8 @@ protected:
         auto conn = pool_->acquire();
         pqxx::work txn(conn.get());
         auto result = txn.exec(
-            "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id",
-            pqxx::params{"test_session_user", "hash"}
+            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+            pqxx::params{"test_session_user", "hash", "test_salt"}
         );
         test_user_id_ = result[0][0].as<int>();
         txn.commit();
