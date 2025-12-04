@@ -322,7 +322,7 @@ int main(int argc, char** argv)
                 // Confirm user's email
                 txn.exec_params(
                     pqxx::zview("UPDATE users SET email_confirmed = true WHERE id = $1"),
-                    user_id
+                    pqxx::params{ user_id }
                 );
 
                 txn.commit();

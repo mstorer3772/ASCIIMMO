@@ -38,6 +38,9 @@ find_package(Boost REQUIRED COMPONENTS system)
 # Find OpenSSL for HTTPS support
 find_package(OpenSSL REQUIRED)
 
+# Find yaml-cpp for YAML configuration parsing
+find_package(yaml-cpp REQUIRED)
+
 # Find PostgreSQL and bring in a modern libpqxx (built from source)
 include(FetchContent)
 find_package(PostgreSQL REQUIRED)
@@ -67,19 +70,19 @@ target_include_directories(worldgen PUBLIC include)
 # Microservice binaries
 add_executable(world-service src/world_service.cpp)
 target_include_directories(world-service PRIVATE include)
-target_link_libraries(world-service PRIVATE worldgen http_server Boost::system)
+target_link_libraries(world-service PRIVATE worldgen http_server Boost::system yaml-cpp)
 
 add_executable(auth-service src/auth_service.cpp)
 target_include_directories(auth-service PRIVATE include)
-target_link_libraries(auth-service PRIVATE http_server db_utils pqxx Boost::system OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(auth-service PRIVATE http_server db_utils pqxx Boost::system OpenSSL::SSL OpenSSL::Crypto yaml-cpp)
 
 add_executable(session-service src/session_service.cpp)
 target_include_directories(session-service PRIVATE include)
-target_link_libraries(session-service PRIVATE http_server Boost::system)
+target_link_libraries(session-service PRIVATE http_server Boost::system yaml-cpp)
 
 add_executable(social-service src/social_service.cpp)
 target_include_directories(social-service PRIVATE include)
-target_link_libraries(social-service PRIVATE http_server Boost::system)
+target_link_libraries(social-service PRIVATE http_server Boost::system yaml-cpp)
 
 # Install rules
 install(TARGETS world-service auth-service session-service social-service RUNTIME DESTINATION bin)

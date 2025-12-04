@@ -9,4 +9,6 @@ curl -sk -X POST https://localhost:8081/shutdown > /dev/null 2>&1 && echo "  ✓
 curl -sk -X POST https://localhost:8082/shutdown > /dev/null 2>&1 && echo "  ✓ session-service (8082) shutdown" || echo "  ✗ session-service (8082) not responding"
 curl -sk -X POST https://localhost:8083/shutdown > /dev/null 2>&1 && echo "  ✓ social-service (8083) shutdown" || echo "  ✗ social-service (8083) not responding"
 
+pkill -f "node run server.js"
+
 echo "Shutdown complete"
