@@ -8,14 +8,16 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
 
-static void print_usage(const char* prog) {
+static void print_usage(const char* prog)
+    {
     std::cerr << "Usage: " << prog << " [--config FILE] [--port P] [--cert FILE] [--key FILE] [--default-seed N] [--default-width W] [--default-height H]\n";
     std::cerr << "  Config file defaults to config/services.yaml\n";
     std::cerr << "  Command line options override config file values\n";
-}
+    }
 
 // Parse query string parameters
-static std::string get_param(const std::string& target, const std::string& key) {
+static std::string get_param(const std::string& target, const std::string& key)
+    {
     auto pos = target.find('?');
     if (pos == std::string::npos) return "";
 
@@ -27,22 +29,123 @@ static std::string get_param(const std::string& target, const std::string& key) 
     auto start = pos + search.length();
     auto end = query.find('&', start);
     return query.substr(start, end == std::string::npos ? std::string::npos : end - start);
-}
+    }
 
 // Validate session token
-static bool validate_session_token(const std::string& target, asciimmo::auth::TokenCache& cache) {
+static bool validate_session_token(const std::string& target, asciimmo::auth::TokenCache& cache)
+    {
     std::string token_str = get_param(target, "session_token");
+#ifdef NDEBUG // only require a token in release builds
     if (token_str.empty()) return false;
-    
-    try {
+#endif
+
+    try
+        {
         uint64_t token = std::stoull(token_str);
         return cache.validate_token(token);
-    } catch (...) {
-        return false;
+        }
+        catch (...)
+            {
+            return false;
+            }
     }
-}
 
-int main(int argc, char** argv) {
+// Handler function objects
+struct WorldHandler
+    {
+    asciimmo::log::Logger& logger;
+    unsigned long long default_seed;
+    int default_width;
+    int default_height;
+    asciimmo::auth::TokenCache& token_cache;
+
+    void operator()(const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&)
+        {
+        logger.info("Received /world request");
+        std::string target(req.target());
+
+        // Validate session token
+        if (!validate_session_token(target, token_cache))
+            {
+            logger.info("Invalid or missing session token");
+            res.result(boost::beast::http::status::unauthorized);
+            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
+            res.prepare_payload();
+            return;
+            }
+
+        unsigned long long seed = default_seed;
+        int width = default_width;
+        int height = default_height;
+
+        try
+            {
+            auto seed_str = get_param(target, "seed");
+            auto width_str = get_param(target, "width");
+            auto height_str = get_param(target, "height");
+
+            if (!seed_str.empty()) seed = std::stoull(seed_str);
+            if (!width_str.empty()) width = std::stoi(width_str);
+            if (!height_str.empty()) height = std::stoi(height_str);
+            }
+            catch (...)
+                {
+                // ignore parse errors and fall back to defaults
+                }
+
+            asciimmo::WorldGen gen(seed, width, height);
+            std::string map = gen.generate();
+            res.result(boost::beast::http::status::ok);
+            res.set(boost::beast::http::field::content_type, "text/plain; charset=utf-8");
+            res.body() = map;
+            res.prepare_payload();
+            logger.info("Responded to /world request");
+        }
+    };
+
+struct HealthHandler
+    {
+    asciimmo::log::Logger& logger;
+
+    void operator()(const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&)
+        {
+        logger.info("Health check received");
+        // Health endpoint doesn't require session token
+        res.result(boost::beast::http::status::ok);
+        res.body() = R"({"status":"ok","service":"world"})";
+        res.prepare_payload();
+        }
+    };
+
+struct ShutdownHandler
+    {
+    boost::asio::io_context& ioc;
+    asciimmo::log::Logger& logger;
+
+    void operator()(const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch&)
+        {
+        logger.info("Shutdown requested via /shutdown endpoint");
+        res.result(boost::beast::http::status::ok);
+        res.body() = R"({"status":"ok","message":"shutting down"})";
+        res.prepare_payload();
+        ioc.stop();
+        }
+    };
+
+struct SignalHandler
+    {
+    boost::asio::io_context& ioc;
+    asciimmo::log::Logger& logger;
+
+    void operator()(const boost::system::error_code&, int)
+        {
+        logger.info("Shutdown signal received");
+        ioc.stop();
+        }
+    };
+
+int main(int argc, char** argv)
+    {
     asciimmo::log::Logger logger("world-service");
 
     // Load configuration
@@ -50,17 +153,20 @@ int main(int argc, char** argv) {
     std::string config_file = "config/services.yaml";
 
     // Check for config file argument first
-    for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "--config" && i + 1 < argc) {
+    for (int i = 1; i < argc; ++i)
+        {
+        if (std::string(argv[i]) == "--config" && i + 1 < argc)
+            {
             config_file = argv[++i];
             break;
+            }
         }
-    }
 
-    if (!config.load(config_file)) {
+    if (!config.load(config_file))
+        {
         logger.warning("Could not load config file: " + config_file);
-    }
-    
+        }
+
     // Get values from config with defaults
     int port = config.get_int("world_service.port", 8080);
     std::string cert_file = config.get_string("global.cert_file", "certs/server.crt");
@@ -70,100 +176,66 @@ int main(int argc, char** argv) {
     int default_height = config.get_int("world_service.default_height", 24);
 
     // Command line arguments override config file
-    for (int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i)
+        {
         std::string a = argv[i];
-        if (a == "--config") {
+        if (a == "--config")
+            {
             ++i; // Skip, already processed
-        } else if (a == "--port" && i + 1 < argc) {
+            }
+        else if (a == "--port" && i + 1 < argc)
+            {
             port = std::stoi(argv[++i]);
-        } else if (a == "--cert" && i + 1 < argc) {
+            }
+        else if (a == "--cert" && i + 1 < argc)
+            {
             cert_file = argv[++i];
-        } else if (a == "--key" && i + 1 < argc) {
+            }
+        else if (a == "--key" && i + 1 < argc)
+            {
             key_file = argv[++i];
-        } else if (a == "--default-seed" && i + 1 < argc) {
+            }
+        else if (a == "--default-seed" && i + 1 < argc)
+            {
             default_seed = std::stoull(argv[++i]);
-        } else if (a == "--default-width" && i + 1 < argc) {
+            }
+        else if (a == "--default-width" && i + 1 < argc)
+            {
             default_width = std::stoi(argv[++i]);
-        } else if (a == "--default-height" && i + 1 < argc) {
+            }
+        else if (a == "--default-height" && i + 1 < argc)
+            {
             default_height = std::stoi(argv[++i]);
-        } else if (a == "-h" || a == "--help") {
+            }
+        else if (a == "-h" || a == "--help")
+            {
             print_usage(argv[0]);
             return 0;
-        } else {
+            }
+        else
+            {
             print_usage(argv[0]);
             return 1;
+            }
         }
-    }
 
     asciimmo::auth::TokenCache token_cache;
-    
+
     boost::asio::io_context ioc;
     asciimmo::http::Server svr(ioc, port, cert_file, key_file);
 
     logger.info("Starting world-service on port " + std::to_string(port));
 
-    svr.get("/world", [&logger, default_seed, default_width, default_height, &token_cache](
-        const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
-        logger.info("Received /world request");
-        std::string target(req.target());
-        
-        // Validate session token
-        if (!validate_session_token(target, token_cache)) {
-            res.result(boost::beast::http::status::unauthorized);
-            res.body() = R"({"status":"error","message":"invalid or missing session token"})";
-            res.prepare_payload();
-            return;
-        }
-        
-        unsigned long long seed = default_seed;
-        int width = default_width;
-        int height = default_height;
-        
-        try {
-            auto seed_str = get_param(target, "seed");
-            auto width_str = get_param(target, "width");
-            auto height_str = get_param(target, "height");
-            
-            if (!seed_str.empty()) seed = std::stoull(seed_str);
-            if (!width_str.empty()) width = std::stoi(width_str);
-            if (!height_str.empty()) height = std::stoi(height_str);
-        } catch (...) {
-            // ignore parse errors and fall back to defaults
-        }
-
-        asciimmo::WorldGen gen(seed, width, height);
-        std::string map = gen.generate();
-        res.result(boost::beast::http::status::ok);
-        res.set(boost::beast::http::field::content_type, "text/plain; charset=utf-8");
-        res.body() = map;
-        res.prepare_payload();
-    });
-
-    svr.get("/health", [&logger](const asciimmo::http::Request& req, asciimmo::http::Response& res, const std::smatch&) {
-        logger.info("Health check received");
-        // Health endpoint doesn't require session token
-        res.result(boost::beast::http::status::ok);
-        res.body() = R"({"status":"ok","service":"world"})";
-        res.prepare_payload();
-    });
-
-    svr.post("/shutdown", [&ioc, &logger](const asciimmo::http::Request&, asciimmo::http::Response& res, const std::smatch&) {
-        logger.info("Shutdown requested via /shutdown endpoint");
-        res.result(boost::beast::http::status::ok);
-        res.body() = R"({"status":"ok","message":"shutting down"})";
-        res.prepare_payload();
-        ioc.stop();
-    });
+    svr.get("/world", WorldHandler{ logger, default_seed, default_width, default_height, token_cache });
+    svr.get("/health", HealthHandler{ logger });
+    svr.post("/shutdown", ShutdownHandler{ ioc, logger });
 
     boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
-    signals.async_wait([&](auto, auto){
-        logger.info("Shutdown signal received");
-        ioc.stop();
-    });
-    
+    signals.async_wait(SignalHandler{ ioc, logger });
+
     svr.run();
     ioc.run();
-    
+
     logger.info("Service stopped");
     return 0;
-}
+    }

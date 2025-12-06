@@ -12,6 +12,7 @@ class SocialDatabaseTest : public ::testing::Test
             {
             config_ = Config::from_env();
             try
+
                 {
                 pool_ = std::make_unique<ConnectionPool>(config_);
                 }
@@ -46,8 +47,7 @@ class SocialDatabaseTest : public ::testing::Test
                 // Delete parties and guilds first (they reference users)
                 txn.exec("DELETE FROM parties WHERE leader_id IN (" + txn.quote(test_user1_id_) + ", " + txn.quote(test_user2_id_) + ")");
                 txn.exec("DELETE FROM guilds WHERE leader_id IN (" + txn.quote(test_user1_id_) + ", " + txn.quote(test_user2_id_) + ")");
-                txn.exec("DELETE FROM users WHERE id IN ($1, $2)",
-                    pqxx::params{ test_user1_id_, test_user2_id_ });
+                txn.exec("DELETE FROM users WHERE id IN (" + txn.quote(test_user1_id_) + ", " + txn.quote(test_user2_id_) + ")");
                 txn.commit();
                 }
             pool_.reset();

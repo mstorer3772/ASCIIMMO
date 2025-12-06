@@ -153,12 +153,15 @@ Server::Server(net::io_context& ioc, unsigned short port,
     , acceptor_(ioc, tcp::endpoint(tcp::v4(), port))
     , running_(false)
     , use_ssl_(true)
-    , ssl_ctx_(std::make_unique<ssl::context>(ssl::context::tlsv12_server))
+    , ssl_ctx_(std::make_unique<ssl::context>(ssl::context::tls_server))
     {
 
     ssl_ctx_->set_options(
         ssl::context::default_workarounds |
         ssl::context::no_sslv2 |
+        ssl::context::no_sslv3 |
+        ssl::context::no_tlsv1 |
+        ssl::context::no_tlsv1_1 |
         ssl::context::single_dh_use);
 
     ssl_ctx_->use_certificate_chain_file(cert_file);
@@ -225,14 +228,15 @@ void Server::handle_request(const Request& req, Response& res)
 
     // Add CORS headers to all responses
     res.set(beast::http::field::access_control_allow_origin, "*");
-    // No delete, no options, just get, post, put.
-    res.set(beast::http::field::access_control_allow_methods, "GET, POST, PUT");
+    // No delete.  Just get, post, put, options
+    res.set(beast::http::field::access_control_allow_methods, "GET, POST, PUT, OPTIONS");
     res.set(beast::http::field::access_control_allow_headers, "Content-Type, Authorization");
     res.set(beast::http::field::access_control_max_age, "86400"); // 24 * 60 * 60 seconds
 
     // Handle OPTIONS preflight requests
     if (req.method() == beast::http::verb::options)
         {
+        std::cout << "Handled OPTIONS request for " << target << std::endl;
         res.result(beast::http::status::no_content);
         res.prepare_payload();
         return;

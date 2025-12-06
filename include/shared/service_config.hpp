@@ -6,9 +6,7 @@
 #include <stdexcept>
 #include <yaml-cpp/yaml.h>
 
-namespace asciimmo
-{
-namespace config
+namespace asciimmo::config
 {
 
 // YAML config parser using yaml-cpp library
@@ -191,5 +189,4 @@ class ServiceConfig
         bool loaded_ = false;
     };
 
-} // namespace config
-} // namespace asciimmo
+} // namespace asciimmo::config

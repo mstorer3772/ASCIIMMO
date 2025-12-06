@@ -171,7 +171,7 @@ document.getElementById('gen').addEventListener('click', async () => {
   request.setHeight(parseInt(height));
 
   // Build URL with session token if available
-  let url = `/world?seed=${encodeURIComponent(seed)}&width=${encodeURIComponent(width)}&height=${encodeURIComponent(height)}`;
+  let url = `https://localhost:8080/world?seed=${encodeURIComponent(seed)}&width=${encodeURIComponent(width)}&height=${encodeURIComponent(height)}`;
   if (sessionToken) {
     url += `&session_token=${encodeURIComponent(sessionToken)}`;
   }

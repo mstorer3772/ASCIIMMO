@@ -297,28 +297,4 @@ TEST_F(AuthServiceTest, EmailSenderCreatesConfirmationEmail)
     EXPECT_TRUE(result);
     }
 
-// Test validation logic
-TEST_F(AuthServiceTest, UsernameValidationLength)
-    {
-    std::string too_short = "ab";
-    std::string min_length = "abc";
-    std::string max_length = std::string(50, 'a');
-    std::string too_long = std::string(51, 'a');
-
-    EXPECT_LT(too_short.length(), 3);
-    EXPECT_GE(min_length.length(), 3);
-    EXPECT_LE(max_length.length(), 50);
-    EXPECT_GT(too_long.length(), 50);
-    }
-
-TEST_F(AuthServiceTest, PasswordValidationLength)
-    {
-    std::string too_short = "pass123";
-    std::string min_length = "pass1234";
-    std::string strong = "SecurePassword123!";
-
-    EXPECT_LT(too_short.length(), 8) << "Password should be at least 8 characters";
-    EXPECT_GE(min_length.length(), 8);
-    EXPECT_GE(strong.length(), 8);
-    }
 

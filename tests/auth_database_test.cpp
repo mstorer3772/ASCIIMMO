@@ -47,13 +47,13 @@ TEST_F(AuthDatabaseTest, CreateUser)
     int64_t password_hash = 123456789012345;
     int64_t salt = 987654321098765;
 
-    auto result = txn.exec(
-        "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+    auto result = txn.exec_params(
+        pqxx::zview("INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id"),
         pqxx::params{ username, password_hash, salt }
     );
 
     ASSERT_EQ(result.size(), 1);
-    int user_id = result[0][0].as<int>();
+    int user_id = result[0][0].as<int>(0);
     EXPECT_GT(user_id, 0);
 
     txn.commit();
@@ -69,8 +69,8 @@ TEST_F(AuthDatabaseTest, FindUserByUsername)
     // Insert test user
     {
     pqxx::work txn(conn.get());
-    txn.exec(
-        "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)",
+    txn.exec_params(
+        pqxx::zview("INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)"),
         pqxx::params{ "test_user_find", password_hash, salt }
     );
     txn.commit();
@@ -79,8 +79,8 @@ TEST_F(AuthDatabaseTest, FindUserByUsername)
     // Find user
     {
     pqxx::work txn(conn.get());
-    auto result = txn.exec(
-        "SELECT id, username, password_hash FROM users WHERE username = $1",
+    auto result = txn.exec_params(
+        pqxx::zview("SELECT id, username, password_hash FROM users WHERE username = $1"),
         pqxx::params{ "test_user_find" }
     );
 
@@ -98,19 +98,19 @@ TEST_F(AuthDatabaseTest, DeleteUser)
     int user_id;
     {
     pqxx::work txn(conn.get());
-    auto result = txn.exec(
-        "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+    auto result = txn.exec_params(
+        pqxx::zview("INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id"),
         pqxx::params{ "test_user_delete", int64_t(777888999000111), int64_t(111000999888777) }
     );
-    user_id = result[0][0].as<int>();
+    user_id = result[0][0].as<int>(0);
     txn.commit();
     }
 
     // Delete user
     {
     pqxx::work txn(conn.get());
-    auto result = txn.exec(
-        "DELETE FROM users WHERE id = $1",
+    auto result = txn.exec_params(
+        pqxx::zview("DELETE FROM users WHERE id = $1"),
         pqxx::params{ user_id }
     );
     txn.commit();
@@ -120,8 +120,8 @@ TEST_F(AuthDatabaseTest, DeleteUser)
     // Verify deletion
     {
     pqxx::work txn(conn.get());
-    auto result = txn.exec(
-        "SELECT COUNT(*) FROM users WHERE id = $1",
+    auto result = txn.exec_params(
+        pqxx::zview("SELECT COUNT(*) FROM users WHERE id = $1"),
         pqxx::params{ user_id }
     );
     EXPECT_EQ(result[0][0].as<int>(), 0);
@@ -137,8 +137,8 @@ TEST_F(AuthDatabaseTest, UniqueUsernameConstraint)
     // Insert first user
     {
     pqxx::work txn(conn.get());
-    txn.exec(
-        "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)",
+    txn.exec_params(
+        pqxx::zview("INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)"),
         pqxx::params{ username, int64_t(123456789), int64_t(987654321) }
     );
     txn.commit();
@@ -147,8 +147,8 @@ TEST_F(AuthDatabaseTest, UniqueUsernameConstraint)
     // Try to insert duplicate username
     EXPECT_THROW({
         pqxx::work txn(conn.get());
-        txn.exec(
-            "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)",
+        txn.exec_params(
+            pqxx::zview("INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3)"),
             pqxx::params{username, int64_t(111111111), int64_t(222222222)}
         );
         txn.commit();
@@ -163,19 +163,19 @@ TEST_F(AuthDatabaseTest, UpdateLastLogin)
     int user_id;
     {
     pqxx::work txn(conn.get());
-    auto result = txn.exec(
-        "INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id",
+    auto result = txn.exec_params(
+        pqxx::zview("INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id"),
         pqxx::params{ "test_user_login", int64_t(333444555666), int64_t(666555444333) }
     );
-    user_id = result[0][0].as<int>();
+    user_id = result[0][0].as<int>(0);
     txn.commit();
     }
 
     // Update last_login
     {
     pqxx::work txn(conn.get());
-    txn.exec(
-        "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1",
+    txn.exec_params(
+        pqxx::zview("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1"),
         pqxx::params{ user_id }
     );
     txn.commit();
@@ -184,8 +184,8 @@ TEST_F(AuthDatabaseTest, UpdateLastLogin)
     // Verify update
     {
     pqxx::work txn(conn.get());
-    auto result = txn.exec(
-        "SELECT last_login FROM users WHERE id = $1",
+    auto result = txn.exec_params(
+        pqxx::zview("SELECT last_login FROM users WHERE id = $1"),
         pqxx::params{ user_id }
     );
     EXPECT_FALSE(result[0][0].is_null()) << "last_login should be set";

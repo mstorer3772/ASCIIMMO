@@ -32,15 +32,8 @@ class PasswordHash
         // Hash password with salt using SHA256, return first 64 bits as uint64_t (limited to signed range)
         static uint64_t hash_password(const std::string& password, uint64_t salt)
             {
-            // Convert salt to bytes
-            std::string salt_bytes;
-            salt_bytes.resize(sizeof(uint64_t));
-            for (size_t i = 0; i < sizeof(uint64_t); ++i)
-                {
-                salt_bytes[i] = static_cast<char>((salt >> (i * 8)) & 0xFF);
-                }
 
-            std::string salted = salt_bytes + password;
+            std::string salted = password + std::to_string(salt);
             unsigned char hash[SHA256_DIGEST_LENGTH];
             SHA256(reinterpret_cast<const unsigned char*>(salted.c_str()), salted.length(), hash);
 
